@@ -8,11 +8,11 @@ import type { ROIKeywordInput, ROIKeywordResult } from '@/lib/api';
 // ── Default keyword row ────────────────────────────────────────────────────
 
 interface KeywordRow extends ROIKeywordInput {
-  id: number;
+  id: string;
 }
 
 const DEFAULT_ROW = (): KeywordRow => ({
-  id: Date.now(),
+  id: crypto.randomUUID(),
   keyword: '',
   searchVolume: 1000,
   currentPosition: 10,
@@ -80,10 +80,10 @@ export default function ROIDashboardPage() {
 
   const addRow = () => setRows((r) => [...r, DEFAULT_ROW()]);
 
-  const removeRow = (id: number) =>
+  const removeRow = (id: string) =>
     setRows((r) => (r.length > 1 ? r.filter((row) => row.id !== id) : r));
 
-  const updateRow = (id: number, field: keyof KeywordRow, value: string | number | boolean) =>
+  const updateRow = (id: string, field: keyof KeywordRow, value: string | number | boolean) =>
     setRows((r) => r.map((row) => (row.id === id ? { ...row, [field]: value } : row)));
 
   const handleCalculate = () => {

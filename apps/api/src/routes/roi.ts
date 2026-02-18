@@ -2,6 +2,9 @@ import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 
 import {
+  BRAND_CTR,
+  NON_BRAND_CTR,
+  SEASONALITY_INDEX,
   calculateKeywordROI,
   summariseROI,
   type KeywordROIInput,
@@ -76,19 +79,9 @@ export const roiRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get('/api/roi/ctr-curves', async (_req, reply) => {
     return reply.send({
       ok: true,
-      nonBrand: {
-        1: 0.285, 2: 0.157, 3: 0.110, 4: 0.080, 5: 0.072,
-        6: 0.051, 7: 0.040, 8: 0.032, 9: 0.028, 10: 0.025,
-      },
-      brand: {
-        1: 0.600, 2: 0.120, 3: 0.065, 4: 0.040, 5: 0.030,
-        6: 0.020, 7: 0.015, 8: 0.010, 9: 0.008, 10: 0.006,
-      },
-      seasonalityIndex: {
-        1: 1.05, 2: 0.95, 3: 1.00, 4: 1.00, 5: 1.05,
-        6: 1.10, 7: 1.05, 8: 1.00, 9: 1.05, 10: 1.10,
-        11: 1.20, 12: 1.15,
-      },
+      nonBrand: NON_BRAND_CTR,
+      brand: BRAND_CTR,
+      seasonalityIndex: SEASONALITY_INDEX,
     });
   });
 };

@@ -11,13 +11,13 @@
 // ── CTR Curves ─────────────────────────────────────────────────────────────
 
 /** Non-brand (informational / commercial / transactional) */
-const NON_BRAND_CTR: Record<number, number> = {
+export const NON_BRAND_CTR: Record<number, number> = {
   1: 0.285, 2: 0.157, 3: 0.110, 4: 0.080, 5: 0.072,
   6: 0.051, 7: 0.040, 8: 0.032, 9: 0.028, 10: 0.025,
 };
 
 /** Brand (navigational) — Pos1 reaches 60% because user already knows the target */
-const BRAND_CTR: Record<number, number> = {
+export const BRAND_CTR: Record<number, number> = {
   1: 0.600, 2: 0.120, 3: 0.065, 4: 0.040, 5: 0.030,
   6: 0.020, 7: 0.015, 8: 0.010, 9: 0.008, 10: 0.006,
 };
@@ -54,7 +54,7 @@ export function getConversionMultiplier(position: number): number {
  * Monthly search-volume multiplier vs annual average (=1.0).
  * Nov/Dec e-commerce peaks; Jul/Aug mid-year promotions.
  */
-const SEASONALITY_INDEX: Record<number, number> = {
+export const SEASONALITY_INDEX: Record<number, number> = {
   1: 1.05, 2: 0.95, 3: 1.00, 4: 1.00, 5: 1.05,
   6: 1.10, 7: 1.05, 8: 1.00, 9: 1.05, 10: 1.10,
   11: 1.20, 12: 1.15,

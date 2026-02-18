@@ -1,0 +1,374 @@
+{
+  "meta": {
+    "timestamp": "2026-02-18T15:52:24.417Z",
+    "nodeVersion": "v22.18.0"
+  },
+  "summary": {
+    "total": 65,
+    "passed": 65,
+    "failed": 0,
+    "passRate": "100.0%",
+    "durations": {}
+  },
+  "businessImpact": {
+    "totalKeywords": 12,
+    "totalMonthlyTrafficGain": 5203,
+    "totalMonthlyRevenueGain": 124872,
+    "totalAnnualRevenueGain": 1498464,
+    "top5Opportunities": [
+      {
+        "keyword": "Google Search Console",
+        "opportunityScore": 13781,
+        "trafficDelta": 992
+      },
+      {
+        "keyword": "SEO 優化",
+        "opportunityScore": 12507,
+        "trafficDelta": 850
+      },
+      {
+        "keyword": "WordPress SEO",
+        "opportunityScore": 11232,
+        "trafficDelta": 842
+      },
+      {
+        "keyword": "AI 內容生成",
+        "opportunityScore": 9180,
+        "trafficDelta": 560
+      },
+      {
+        "keyword": "Core Web Vitals",
+        "opportunityScore": 7857,
+        "trafficDelta": 495
+      }
+    ]
+  },
+  "baselineFile": "C:\\Users\\User\\Desktop\\AISEO\\test-results\\roi-baseline-2026-02-18T15-52-24.json",
+  "assertions": [
+    {
+      "name": "R1-01 Pos1 CTR > Pos3 CTR",
+      "pass": true,
+      "detail": "P1=28.5% P3=11.0%"
+    },
+    {
+      "name": "R1-02 Pos1 CTR > Pos10 CTR",
+      "pass": true,
+      "detail": "P1=28.5% P10=2.5%"
+    },
+    {
+      "name": "R1-03 CTR 單調遞減 (P1→P10)",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "R1-04 Pos1 CTR 符合業界 (>25%)",
+      "pass": true,
+      "detail": "got=28.5%"
+    },
+    {
+      "name": "R1-05 Pos10 CTR < 3%",
+      "pass": true,
+      "detail": "got=2.5%"
+    },
+    {
+      "name": "R1-06 頁外排名 (>10) CTR < 1%",
+      "pass": true,
+      "detail": "P11=0.50%"
+    },
+    {
+      "name": "R2-01 流量預測為非負整數",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "R2-02 目標流量 > 當前流量",
+      "pass": true,
+      "detail": "cur=41 → target=891"
+    },
+    {
+      "name": "R2-03 delta = 目標 - 當前",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "R2-04 月收入預估 >= 0",
+      "pass": true,
+      "detail": "got=20400"
+    },
+    {
+      "name": "R2-05 CTR 計算符合曲線",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "R3-01 機會評分清單非空",
+      "pass": true,
+      "detail": "got 12"
+    },
+    {
+      "name": "R3-02 機會分數正確降序排列",
+      "pass": true,
+      "detail": "排序邏輯"
+    },
+    {
+      "name": "R3-03 零流量關鍵字不崩潰",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "R3-04 TOP-3 輸出正確",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "R3-05 高KD詞機會分數低於同流量低KD詞",
+      "pass": true,
+      "detail": "KD懲罰驗證"
+    },
+    {
+      "name": "R4-01 [SEO 優化] 排名提升後流量增加",
+      "pass": true,
+      "detail": "delta=850"
+    },
+    {
+      "name": "R4-02 [SEO 優化] delta 計算值 = after - before",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "R4-01 [WordPress ] 排名提升後流量增加",
+      "pass": true,
+      "detail": "delta=842"
+    },
+    {
+      "name": "R4-02 [WordPress ] delta 計算值 = after - before",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "R4-01 [電商 SEO] 排名提升後流量增加",
+      "pass": true,
+      "detail": "delta=362"
+    },
+    {
+      "name": "R4-02 [電商 SEO] delta 計算值 = after - before",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "R5-01 [一般 SaaS] 月收入 >= 0",
+      "pass": true,
+      "detail": "got NT$14400"
+    },
+    {
+      "name": "R5-02 [一般 SaaS] 收入 = 流量 × 轉換率 × 客單價",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "R5-01 [高單價電商] 月收入 >= 0",
+      "pass": true,
+      "detail": "got NT$19600"
+    },
+    {
+      "name": "R5-02 [高單價電商] 收入 = 流量 × 轉換率 × 客單價",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "R5-01 [免費工具導流] 月收入 >= 0",
+      "pass": true,
+      "detail": "got NT$250"
+    },
+    {
+      "name": "R5-02 [免費工具導流] 收入 = 流量 × 轉換率 × 客單價",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "R5-03 彙總月流量值為正整數",
+      "pass": true,
+      "detail": "5203"
+    },
+    {
+      "name": "R5-04 彙總月收入值為正整數",
+      "pass": true,
+      "detail": "124872"
+    },
+    {
+      "name": "R6-01 TOP-5 輸出完整",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "R6-02 TOP-5 機會分數降序",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "R6-03 TOP-5 均有正向流量增益",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "R7-01 基線 JSON 成功寫入",
+      "pass": true,
+      "detail": "C:\\Users\\User\\Desktop\\AISEO\\test-results\\roi-baseline-2026-02-18T15-52-24.json"
+    },
+    {
+      "name": "R7-02 基線 JSON 可讀回",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "R7-03 基線含所有必要欄位",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "R8-01 首次執行無前次基線 (預期正常)",
+      "pass": true,
+      "detail": "初始基線已建立"
+    },
+    {
+      "name": "R9-01 [技術 SEO 指南] 無除零錯誤",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "R9-02 [技術 SEO 指南] 流量預估 = 0",
+      "pass": true,
+      "detail": "got=0"
+    },
+    {
+      "name": "R9-03 [技術 SEO 指南] 月收入預估 = 0 或 >= 0",
+      "pass": true,
+      "detail": "got=0"
+    },
+    {
+      "name": "R9-01 [極冷門話題] 無除零錯誤",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "R9-02 [極冷門話題] 流量預估 = 0",
+      "pass": true,
+      "detail": "got=0"
+    },
+    {
+      "name": "R9-03 [極冷門話題] 月收入預估 = 0 或 >= 0",
+      "pass": true,
+      "detail": "got=0"
+    },
+    {
+      "name": "R10-01 12 個關鍵字評估 < 5000ms (純計算)",
+      "pass": true,
+      "detail": "1ms"
+    },
+    {
+      "name": "R10-02 全部 12 個關鍵字均有結果",
+      "pass": true,
+      "detail": "got 12"
+    },
+    {
+      "name": "R10-03 無 NaN / Infinity 值",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "R11-01 Brand Pos1 CTR (60%) > Non-Brand (28.5%)",
+      "pass": true,
+      "detail": "brand=0.6 non-brand=0.285"
+    },
+    {
+      "name": "R11-02 Brand CTR 曲線更陡峭 (Pos1/Pos2 差距更大)",
+      "pass": true,
+      "detail": "brand_drop=0.480 non-brand_drop=0.128"
+    },
+    {
+      "name": "R11-03 Brand 模式使用 Brand CTR",
+      "pass": true,
+      "detail": "currentCTR=0.065 targetCTR=0.6"
+    },
+    {
+      "name": "R11-04 同一搜尋量 Brand Pos1 流量 > Non-Brand Pos1",
+      "pass": true,
+      "detail": "brand=3000 non-brand=1425"
+    },
+    {
+      "name": "R11-05 isBrand 旗標正確記錄",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "R12-01 Pos1 multiplier (1.8) > Pos5 (1.1) > Pos10 (0.9)",
+      "pass": true,
+      "detail": "Pos1=1.8 Pos5=1.1 Pos10=0.9"
+    },
+    {
+      "name": "R12-02 Pos > 20 multiplier < 1.0",
+      "pass": true,
+      "detail": "Pos25=0.5"
+    },
+    {
+      "name": "R12-03 Pos <= 0 multiplier = 0",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "R12-04 目標 Pos1 的 conversionMultiplier > 目標 Pos8",
+      "pass": true,
+      "detail": "Pos1=1.8 Pos8=1"
+    },
+    {
+      "name": "R13-01 所有月份指數 > 0",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "R13-02 11月(雙十一)指數 > 平均值 1.0",
+      "pass": true,
+      "detail": "Nov=1.2"
+    },
+    {
+      "name": "R13-03 12月(聖誕/年終) > 2月(淡季)",
+      "pass": true,
+      "detail": "Dec=1.15 Feb=0.95"
+    },
+    {
+      "name": "R13-04 11月指數最高 (1.20)",
+      "pass": true,
+      "detail": "Nov=1.2 Dec=1.15"
+    },
+    {
+      "name": "R13-05 不同月份產生不同 adjustedMonthlyRevenue",
+      "pass": true,
+      "detail": "Nov=15984 Feb=12654"
+    },
+    {
+      "name": "R13-06 v1 monthlyRevenueImpact 不受月份影響（向後兼容）",
+      "pass": true,
+      "detail": "Nov_v1=9360 Feb_v1=9360"
+    },
+    {
+      "name": "R14-01 adjustedMonthlyRevenue ≠ monthlyRevenueImpact (因 multiplier + seasonality)",
+      "pass": true,
+      "detail": "v2=110822 v1=48576"
+    },
+    {
+      "name": "R14-02 Pos1 adjusted 收入 > v1 收入 (因 target conversion multiplier=1.8)",
+      "pass": true,
+      "detail": "v2=110822 v1=48576"
+    },
+    {
+      "name": "R14-03 v2 收入值為有限數字 (no NaN/Infinity)",
+      "pass": true,
+      "detail": "adjusted=110822 seasonal=1.2"
+    },
+    {
+      "name": "R14-04 批次結果均含 v2 欄位",
+      "pass": true,
+      "detail": ""
+    }
+  ]
+}

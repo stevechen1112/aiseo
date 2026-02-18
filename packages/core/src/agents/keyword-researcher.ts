@@ -185,13 +185,18 @@ export class KeywordResearcherAgent extends BaseAgent<KeywordResearcherInput, Ke
     const list = Array.from(new Set(keywords.map((k) => k.trim()).filter(Boolean))).slice(0, 12);
     if (list.length === 0) return [];
 
-    const prompt = `你是專業 SEO 策略師。請為每個關鍵字判斷「搜尋意圖」並用 JSON 回答。
+    const prompt = `你是專業 SEO 策略師，專精於繁體中文（台灣/香港）市場的搜尋意圖分析。請為每個關鍵字判斷「搜尋意圖」並用 JSON 回答。
 
 意圖只能是以下四種之一：
-- informational（想學習/找教學/了解是什麼）
-- commercial（在比較/評測/找推薦但尚未購買）
-- transactional（明確購買/價格/方案/註冊/下載）
-- navigational（想找特定品牌/官網/登入頁）
+- informational（想學習、找教學、了解概念。常見詞：「是什麼」「怎麼做」「教學」「原理」「範例」「如何」）
+- commercial（正在比較、評測、找推薦，但尚未購買。常見詞：「推薦」「比較」「最好的」「排名」「評價」「心得」「優缺點」「哪個好」「課程」「工具」「方案」「軟體」「平台」「服務」）
+- transactional（明確要購買、註冊、下載。常見詞：「價格」「費用」「購買」「下載」「註冊」「訂閱」「免費試用」「折扣」「優惠碼」「立即」「官網」）
+- navigational（想找特定品牌或官方網站/登入頁。常見詞：「登入」「官網」「帳號」，或關鍵字本身就是品牌名）
+
+【重要判斷規則】
+- 含有「課程」「工具」「方案」「推薦」「比較」「最好」「哪個」的關鍵字，通常代表用戶正在選購階段，應判為 commercial
+- 含有「價格」「費用」「購買」「下載」「免費試用」的關鍵字，應判為 transactional
+- 不確定時優先考慮 commercial > informational（台灣用戶搜尋產品類詞彙時購買意圖通常較高）
 
 請輸出格式：
 {

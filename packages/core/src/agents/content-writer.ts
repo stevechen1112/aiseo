@@ -33,6 +33,49 @@ export class ContentWriterAgent extends BaseAgent<ContentWriterInput, ContentWri
   readonly id = 'content-writer';
   readonly description = 'AI-powered SEO content writer with outline generation, section writing, and optimization.';
 
+  // ── 簡體→繁體常見字映射 (覆蓋 LLM 最常洩漏的簡體字) ────────
+  private static readonly S2T_MAP: Record<string, string> = {
+    '国': '國', '来': '來', '时': '時', '间': '間', '这': '這',
+    '个': '個', '们': '們', '说': '說', '么': '麼', '发': '發',
+    '现': '現', '实': '實', '应': '應', '该': '該', '为': '為',
+    '样': '樣', '问': '問', '题': '題', '经': '經', '体': '體',
+    '与': '與', '关': '關', '学': '學', '对': '對', '开': '開',
+    '从': '從', '会': '會', '进': '進', '动': '動', '机': '機',
+    '长': '長', '点': '點', '无': '無', '过': '過', '后': '後',
+    '还': '還', '没': '沒', '电': '電', '东': '東', '车': '車',
+    '让': '讓', '将': '將', '要': '要', '价': '價', '护': '護',
+    '节': '節', '华': '華', '达': '達', '运': '運', '连': '連',
+    '单': '單', '网': '網', '优': '優', '础': '礎', '据': '據',
+    '显': '顯', '质': '質', '数': '數', '总': '總', '办': '辦',
+    '变': '變', '标': '標', '组': '組', '结': '結', '构': '構',
+    '设': '設', '计': '計', '认': '認', '获': '獲', '选': '選',
+    '织': '織', '则': '則', '测': '測', '试': '試', '调': '調',
+    '环': '環', '境': '境', '场': '場', '仅': '僅', '处': '處',
+    '术': '術', '类': '類', '确': '確', '谈': '談', '议': '議',
+    '称': '稱', '际': '際', '属': '屬', '统': '統', '规': '規',
+    '响': '響', '画': '畫', '语': '語', '页': '頁', '须': '須',
+    '万': '萬', '图': '圖', '写': '寫', '转': '轉', '传': '傳',
+    '广': '廣', '专': '專', '复': '複', '创': '創', '备': '備',
+    '报': '報', '产': '產', '导': '導', '极': '極', '战': '戰',
+    '独': '獨', '录': '錄', '热': '熱', '搜': '搜', '视': '視',
+    '离': '離', '难': '難', '义': '義', '丰': '豐', '临': '臨',
+  };
+
+  private static readonly S2T_REGEX = new RegExp(
+    '[' + Object.keys(ContentWriterAgent.S2T_MAP).join('') + ']', 'g',
+  );
+
+  /**
+   * 將 LLM 輸出中偶爾洩漏的簡體字轉為正體字。
+   * 不依賴外部庫（如 OpenCC），純靜態映射覆蓋最常見 100+ 字。
+   */
+  private toTraditional(text: string): string {
+    return text.replace(
+      ContentWriterAgent.S2T_REGEX,
+      (ch) => ContentWriterAgent.S2T_MAP[ch] ?? ch,
+    );
+  }
+
   private countCjkAwareWords(text: string): number {
     // For Chinese content, whitespace tokenization massively under-counts.
     // This heuristic counts:
@@ -178,7 +221,7 @@ export class ContentWriterAgent extends BaseAgent<ContentWriterInput, ContentWri
       };
 
       const result = await ctx.tools.run<LlmChatInput, LlmChatOutput>('llm.chat', llmInput, ctx);
-      return result.content.trim();
+      return this.toTraditional(result.content.trim());
     } catch (error) {
       // Fallback to simple title if LLM fails
       console.warn(`LLM title generation failed: ${error}, using fallback`);
@@ -198,9 +241,11 @@ export class ContentWriterAgent extends BaseAgent<ContentWriterInput, ContentWri
 
 要求：
 1. 必須包含關鍵字：${primaryKeyword}
-2. 長度在 150-160 個字元之間
+2. 【嚴格限制】長度必須在 120-150 個字元之間（絕對不可超過 155 字元，否則會被 Google 截斷）
 3. 要能吸引用戶點擊，並準確描述內容
 4. 語氣專業但易懂
+5. 結尾建議使用一個行動呼籲（如「立即了解」「馬上開始」）
+6. 不要使用驚嘆號超過一次
 
 只回答 meta description 本身，不要額外說明。`;
 
@@ -215,7 +260,37 @@ export class ContentWriterAgent extends BaseAgent<ContentWriterInput, ContentWri
       };
 
       const result = await ctx.tools.run<LlmChatInput, LlmChatOutput>('llm.chat', llmInput, ctx);
-      return result.content.trim();
+      let meta = this.toTraditional(result.content.trim());
+      // Hard truncation safety: if LLM still exceeds 155 chars, truncate gracefully
+      if (meta.length > 155) {
+        // Find last sentence boundary (。！？) within 155 chars, or last comma/space
+        const truncated = meta.slice(0, 155);
+        const lastSentEnd = Math.max(
+          truncated.lastIndexOf('。'),
+          truncated.lastIndexOf('！'),
+          truncated.lastIndexOf('？'),
+        );
+        const lastComma = Math.max(truncated.lastIndexOf('，'), truncated.lastIndexOf('、'));
+        const cutAt = lastSentEnd > 100 ? lastSentEnd + 1 : lastComma > 100 ? lastComma + 1 : 150;
+        meta = meta.slice(0, cutAt);
+      }
+
+      // CTA enforcement: if Meta lacks CTA words or question mark, append one
+      const ctaWords = ['了解', '立即', '探索', '查看', '學習', '開始', '馬上', '掌握'];
+      const hasCta = ctaWords.some(w => meta.includes(w));
+      const hasQuestion = meta.includes('？') || meta.includes('?');
+      if (!hasCta && !hasQuestion) {
+        meta = meta.replace(/[。！？!?]$/, '');
+        const ctaSuffix = '，立即了解！';
+        if (meta.length + ctaSuffix.length <= 155) {
+          meta += ctaSuffix;
+        } else {
+          // Trim to fit
+          meta = meta.slice(0, 155 - ctaSuffix.length) + ctaSuffix;
+        }
+      }
+
+      return meta;
     } catch (error) {
       // Fallback to simple meta description if LLM fails
       console.warn(`LLM meta description generation failed: ${error}, using fallback`);
@@ -277,6 +352,8 @@ export class ContentWriterAgent extends BaseAgent<ContentWriterInput, ContentWri
 4. 內容要有價值、實用，避免空洞或重複
 5. 段落分明，適當使用列點或小標題
 6. 不要產生標題（只要內容本身）
+7. 【E-E-A-T 要求】每段必須包含至少一個量化數據或統計（例如「提升 40%」「降低至 200ms 以下」「超過 78% 的使用者」「節省 3 倍時間」）。引用具體數字能大幅提升內容的專業可信度。
+8. 適當提及來源或依據（例如「根據 Google 官方建議」「Lighthouse 測試結果顯示」「根據 2024 年調查報告」），增強權威性。
 
 請直接輸出內容，不要額外說明。`;
 
@@ -291,7 +368,7 @@ export class ContentWriterAgent extends BaseAgent<ContentWriterInput, ContentWri
       };
 
       const result = await ctx.tools.run<LlmChatInput, LlmChatOutput>('llm.chat', llmInput, ctx);
-      return result.content.trim();
+      return this.toTraditional(result.content.trim());
     } catch (error) {
       // Fallback to simple placeholder if LLM fails
       console.warn(`LLM section content generation failed: ${error}, using fallback`);

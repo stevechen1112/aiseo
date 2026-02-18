@@ -1,0 +1,207 @@
+{
+  "meta": {
+    "timestamp": "2026-02-18T14:51:40.899Z",
+    "nodeVersion": "v22.18.0"
+  },
+  "summary": {
+    "total": 35,
+    "passed": 33,
+    "failed": 2,
+    "passRate": "94.3%",
+    "durations": {
+      "gen-article1": 63084,
+      "gen-article2": 52798,
+      "schema": 0
+    }
+  },
+  "articles": {
+    "article1": {
+      "title": "Next.js 效能優化：完整指南，提升網站速度與使用者體驗 (2024)",
+      "wordCount": 2232,
+      "seoScore": 100
+    },
+    "article2": {
+      "title": "Next.js 網站速度優化：提升效能的實用技巧與最佳實踐 (2024)",
+      "wordCount": 2152,
+      "seoScore": 100
+    },
+    "similarity": "18.1%"
+  },
+  "assertions": [
+    {
+      "name": "Q1-01 標題長度 30–60 字元",
+      "pass": true,
+      "detail": "len=37"
+    },
+    {
+      "name": "Q1-02 標題含主關鍵字",
+      "pass": true,
+      "detail": "kw=\"Next.js\""
+    },
+    {
+      "name": "Q1-03 主關鍵字位於標題前段",
+      "pass": true,
+      "detail": "pos=0"
+    },
+    {
+      "name": "Q1-04 標題無重複詞語",
+      "pass": true,
+      "detail": "Next.js 效能優化：完整指南，提升網站速度與使用者體驗 (2024)"
+    },
+    {
+      "name": "Q2-01 H1 唯一 (≡ 1)",
+      "pass": true,
+      "detail": "got 1"
+    },
+    {
+      "name": "Q2-02 H2 數量 3–8",
+      "pass": true,
+      "detail": "got 7"
+    },
+    {
+      "name": "Q2-03 H2 均非空且 < 80 字元",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Q2-04 不同 H2 無字面重複",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Q3-01 主關鍵字密度 1–3%",
+      "pass": true,
+      "detail": "1.39%"
+    },
+    {
+      "name": "Q3-02 主關鍵字自然分佈 (前中後均出現)",
+      "pass": true,
+      "detail": "p1=true p2=true p3=true"
+    },
+    {
+      "name": "Q3-03 次要關鍵字覆蓋 >= 80%",
+      "pass": true,
+      "detail": "4/4"
+    },
+    {
+      "name": "Q3-04 無關鍵字堆砌 (密度 < 5%)",
+      "pass": true,
+      "detail": "1.39%"
+    },
+    {
+      "name": "Q4-01 Meta 長度 80–160 字元",
+      "pass": false,
+      "detail": "len=164"
+    },
+    {
+      "name": "Q4-02 Meta 含主關鍵字",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Q4-03 Meta 含行動呼籲 (CTA) 或疑問句",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Q4-04 Meta 無連續重複詞",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Q5-01 含量化數據 (數字+單位)",
+      "pass": false,
+      "detail": ""
+    },
+    {
+      "name": "Q5-02 含 E-E-A-T 步驟/建議語氣",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Q5-03 技術術語覆蓋 >= 3 個",
+      "pass": true,
+      "detail": "got 6"
+    },
+    {
+      "name": "Q6-01 LSI 覆蓋率 >= 40%",
+      "pass": true,
+      "detail": "50%"
+    },
+    {
+      "name": "Q6-02 LSI 命中 >= 8 個",
+      "pass": true,
+      "detail": "got 10"
+    },
+    {
+      "name": "Q7-01 平均句子長度 20–60 字元",
+      "pass": true,
+      "detail": "avg=47.8"
+    },
+    {
+      "name": "Q7-02 長句比例 < 40%",
+      "pass": true,
+      "detail": "13%"
+    },
+    {
+      "name": "Q7-03 無過短段落 (<80 字)",
+      "pass": true,
+      "detail": "got 0"
+    },
+    {
+      "name": "Q8-01 兩篇近似主題文章相似度 < 50%",
+      "pass": true,
+      "detail": "18.1%"
+    },
+    {
+      "name": "Q8-02 標題不完全相同",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Q8-03 Meta Description 不完全相同",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Q9-01 Schema 含 @context",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Q9-02 Schema 含 @type",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Q9-03 Schema 含 headline",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Q9-04 Schema 含 author",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Q9-05 Schema 必填欄位覆蓋 >= 4/6",
+      "pass": true,
+      "detail": "5/6: @context, @type, headline, author, datePublished"
+    },
+    {
+      "name": "Q9-06 Schema 代碼長度 >= 200 字元",
+      "pass": true,
+      "detail": "len=250"
+    },
+    {
+      "name": "Q10-01 文章 1 正體字一致性 (無明顯簡體)",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "Q10-02 文章 2 正體字一致性 (無明顯簡體)",
+      "pass": true,
+      "detail": ""
+    }
+  ]
+}

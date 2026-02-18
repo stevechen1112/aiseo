@@ -607,11 +607,21 @@ export default function PageWithSchema() {
       googleRichResultsSupported: true,
       sampleData: {
         headline: 'Article Title',
+        description: 'A comprehensive article covering the topic in depth with expert analysis and practical insights.',
         image: 'https://example.com/image.jpg',
         datePublished: new Date().toISOString(),
+        dateModified: new Date().toISOString(),
         author: {
           '@type': 'Person',
           name: 'Author Name',
+        },
+        publisher: {
+          '@type': 'Organization',
+          name: 'Publisher Name',
+          logo: {
+            '@type': 'ImageObject',
+            url: 'https://example.com/logo.png',
+          },
         },
       },
     });

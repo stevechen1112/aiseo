@@ -45,6 +45,7 @@ import {
   tenantsRoutes,
   platformTenantsRoutes,
   billingRoutes,
+  roiRoutes,
 } from './routes/index.js';
 
 import { createRedisConnection, EventBus } from '@aiseo/core';
@@ -181,6 +182,9 @@ await fastify.register(devRoutes);
 await fastify.register(tenantsRoutes);
 await fastify.register(platformTenantsRoutes);
 await fastify.register(billingRoutes);
+
+// ROI Dashboard
+await fastify.register(roiRoutes);
 
 fastify.get('/health', async () => {
   return { ok: true };

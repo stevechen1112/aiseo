@@ -1407,3 +1407,74 @@ export async function reviewOutreach(
     body: JSON.stringify(input),
   });
 }
+
+// ── ROI Calculator ─────────────────────────────────────────────────────────
+
+export interface ROIKeywordInput {
+  keyword: string;
+  searchVolume: number;
+  currentPosition: number;
+  targetPosition: number;
+  kd?: number;
+  isBrand?: boolean;
+  conversionRate?: number;
+  avgOrderValue?: number;
+}
+
+export interface ROIKeywordResult {
+  keyword: string;
+  searchVolume: number;
+  currentPosition: number;
+  targetPosition: number;
+  kd: number;
+  isBrand: boolean;
+  currentCTR: number;
+  targetCTR: number;
+  currentMonthlyTraffic: number;
+  targetMonthlyTraffic: number;
+  trafficDelta: number;
+  opportunityScore: number;
+  monthlyRevenueV1: number;
+  adjustedMonthlyRevenue: number;
+  annualRevenueV2: number;
+  conversionMultiplierCurrent: number;
+  conversionMultiplierTarget: number;
+  seasonalityFactor: number;
+  conversionRate: number;
+  avgOrderValue: number;
+}
+
+export interface ROIEstimateRequest {
+  keywords: ROIKeywordInput[];
+  conversionRate?: number;
+  avgOrderValue?: number;
+  month?: number;
+}
+
+export interface ROIEstimateResponse {
+  ok: boolean;
+  summary: {
+    totalTrafficDelta: number;
+    totalMonthlyRevenueV2: number;
+    totalAnnualRevenueV2: number;
+    avgOpportunityScore: number;
+  };
+  keywords: ROIKeywordResult[];
+}
+
+export async function estimateROI(
+  input: ROIEstimateRequest,
+  token?: string,
+): Promise<ROIEstimateResponse> {
+  return apiRequest('/api/roi/estimate', {
+    method: 'POST',
+    token,
+    body: JSON.stringify(input),
+  });
+}
+
+export async function getROICtrCurves(
+  token?: string,
+): Promise<{ ok: boolean; nonBrand: Record<string, number>; brand: Record<string, number>; seasonalityIndex: Record<string, number> }> {
+  return apiRequest('/api/roi/ctr-curves', { token });
+}

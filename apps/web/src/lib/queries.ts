@@ -848,3 +848,23 @@ export function useReviewOutreach() {
     },
   });
 }
+
+// ── ROI Calculator ─────────────────────────────────────────────────────────
+
+export function useROIEstimate() {
+  const { token } = useAuth();
+  return useMutation({
+    mutationFn: (input: api.ROIEstimateRequest) =>
+      api.estimateROI(input, token || undefined),
+  });
+}
+
+export function useROICtrCurves() {
+  const { token } = useAuth();
+  return useQuery({
+    queryKey: ['roi', 'ctr-curves'],
+    queryFn: () => api.getROICtrCurves(token || undefined),
+    enabled: !!token,
+    staleTime: Infinity,
+  });
+}

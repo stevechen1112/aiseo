@@ -32,3 +32,6 @@ export { billingRoutes } from './billing.js';
 // Phase 4
 export { tenantsRoutes } from './tenants.js';
 export { platformTenantsRoutes } from './platform-tenants.js';
+
+// ROI Dashboard
+export { roiRoutes } from './roi.js';

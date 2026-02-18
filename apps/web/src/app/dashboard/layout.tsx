@@ -17,6 +17,7 @@ import {
   Menu,
   X,
   User,
+  TrendingUp,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
@@ -82,6 +83,7 @@ export default function DashboardLayout({
         <NavItem href={`${base}/content`} icon={<FileText className="h-5 w-5" />} label="Content" active={pathname.startsWith(`${base}/content`)} />
         <NavItem href={`${base}/audit`} icon={<Activity className="h-5 w-5" />} label="Audit" active={pathname.startsWith(`${base}/audit`)} />
         <NavItem href={`${base}/rankings`} icon={<BarChart3 className="h-5 w-5" />} label="Rankings" active={pathname.startsWith(`${base}/rankings`)} />
+        <NavItem href={`${base}/roi`} icon={<TrendingUp className="h-5 w-5" />} label="ROI Calculator" active={pathname.startsWith(`${base}/roi`)} />
         <NavItem href={`${base}/backlinks`} icon={<LinkIcon className="h-5 w-5" />} label="Backlinks" active={pathname.startsWith(`${base}/backlinks`)} />
         <NavItem href={`${base}/reports`} icon={<FileDown className="h-5 w-5" />} label="Reports" active={pathname.startsWith(`${base}/reports`)} />
 

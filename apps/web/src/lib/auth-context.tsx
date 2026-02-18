@@ -87,12 +87,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!token) return;
 
-    // Refresh token every 14 minutes (assuming 15 min expiry)
+    // Refresh token every 110 minutes (access token expires in 2h)
     const refreshInterval = setInterval(() => {
       refreshToken().catch((error) => {
         console.error('Auto token refresh failed:', error);
       });
-    }, 14 * 60 * 1000);
+    }, 110 * 60 * 1000);
 
     return () => clearInterval(refreshInterval);
   }, [token]);

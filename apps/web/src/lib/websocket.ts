@@ -106,6 +106,12 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     }
   }, [token, reconnect, reconnectInterval, updateStatus]);
 
+  // Reset reconnect counter whenever the token changes so a refreshed token
+  // always gets a full 5 attempts instead of being blocked by a previous failure.
+  useEffect(() => {
+    reconnectAttemptsRef.current = 0;
+  }, [token]);
+
   const disconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);

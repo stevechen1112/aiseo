@@ -18,7 +18,7 @@ import {
 // ── Env / secrets ──────────────────────────────────────────────────
 const JWT_SECRET = env.JWT_SECRET;
 const JWT_REFRESH_SECRET = env.JWT_REFRESH_SECRET;
-const ACCESS_TOKEN_EXPIRY = '15m';
+const ACCESS_TOKEN_EXPIRY = '2h';
 const REFRESH_TOKEN_EXPIRY = '7d';
 const SALT_ROUNDS = 12;
 const REQUIRE_EMAIL_VERIFICATION = env.NODE_ENV === 'production';

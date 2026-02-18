@@ -1,0 +1,305 @@
+{
+  "meta": {
+    "timestamp": "2026-02-18T16:16:57.157Z",
+    "nodeVersion": "v22.18.0",
+    "database": "tw"
+  },
+  "summary": {
+    "total": 39,
+    "passed": 39,
+    "failed": 0,
+    "passRate": "100.0%",
+    "durations": {
+      "s1_single": 8,
+      "s2_batch": 2,
+      "s3_ideas": 1137,
+      "s4_overview": 1,
+      "s5_organic": 1,
+      "s7_batch10": 5,
+      "s8_agent": 10630
+    }
+  },
+  "keywordMetrics": [
+    {
+      "keyword": "SEO",
+      "searchVolume": 18100,
+      "keywordDifficulty": 55,
+      "cpc": 1.29,
+      "competition": 0.26,
+      "trend": [
+        0.67,
+        0.55,
+        0.82,
+        0.82,
+        0.67,
+        0.82,
+        0.67,
+        0.67,
+        0.67,
+        1,
+        0.82,
+        0.82
+      ]
+    },
+    {
+      "keyword": "WordPress",
+      "searchVolume": 22200,
+      "keywordDifficulty": 84,
+      "cpc": 0.55,
+      "competition": 0.48,
+      "trend": [
+        1,
+        0.82,
+        0.82,
+        1,
+        0.82,
+        0.82,
+        0.82,
+        0.82,
+        0.67,
+        0.67,
+        0.67,
+        0.67
+      ]
+    },
+    {
+      "keyword": "Google Analytics",
+      "searchVolume": 18100,
+      "keywordDifficulty": 98,
+      "cpc": 7.62,
+      "competition": 0.04,
+      "trend": [
+        1,
+        0.82,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        0.82,
+        0.82,
+        0.82,
+        0.82
+      ]
+    },
+    {
+      "keyword": "Next.js",
+      "searchVolume": 5400,
+      "keywordDifficulty": 55,
+      "cpc": 0.97,
+      "competition": 0.02,
+      "trend": [
+        0.67,
+        0.67,
+        0.81,
+        1,
+        0.81,
+        0.67,
+        0.67,
+        0.67,
+        0.54,
+        0.54,
+        0.54,
+        0.54
+      ]
+    }
+  ],
+  "assertions": [
+    {
+      "name": "S1-01 SEMRUSH_API_KEY 已設定",
+      "pass": true,
+      "detail": "key=4213929b..."
+    },
+    {
+      "name": "S1-02 SEMRUSH_DATABASE 已設定",
+      "pass": true,
+      "detail": "db=tw"
+    },
+    {
+      "name": "S1-03 API 連線成功（不拋出例外）",
+      "pass": true,
+      "detail": "8ms"
+    },
+    {
+      "name": "S1-04 API 有回傳資料（非空）",
+      "pass": true,
+      "detail": "got 1 metrics"
+    },
+    {
+      "name": "S2-01 批次查詢不拋出例外",
+      "pass": true,
+      "detail": "2ms"
+    },
+    {
+      "name": "S2-02 至少取得 3 個關鍵字的 Metrics",
+      "pass": true,
+      "detail": "got 4/5"
+    },
+    {
+      "name": "S2-03 至少一個關鍵字搜尋量 > 0（真實數據，非全零）",
+      "pass": true,
+      "detail": "SEO=18100, WordPress=22200, Google Analytics=18100, Next.js=5400"
+    },
+    {
+      "name": "S2-04 \"SEO\" 搜尋量 > 100（高熱度詞）",
+      "pass": true,
+      "detail": "got=18100"
+    },
+    {
+      "name": "S2-05 \"SEO\" KD 在 0–100 範圍內",
+      "pass": true,
+      "detail": "got=55"
+    },
+    {
+      "name": "S2-06 \"SEO\" CPC >= 0",
+      "pass": true,
+      "detail": "got=1.29"
+    },
+    {
+      "name": "S2-07 至少一個關鍵字有 12 個月趨勢數據",
+      "pass": true,
+      "detail": "4/4 有趨勢"
+    },
+    {
+      "name": "S3-01 Related/Questions API 呼叫不拋出例外",
+      "pass": true,
+      "detail": "1137ms"
+    },
+    {
+      "name": "S3-02 API 正常響應（即使 tw database 此詞無資料）",
+      "pass": true,
+      "detail": "got 0 — tw db 覆蓋率有限"
+    },
+    {
+      "name": "S3-03 API 不回傳錯誤訊息",
+      "pass": true,
+      "detail": "empty result is valid"
+    },
+    {
+      "name": "S3-04 Keyword Ideas 工具運作無崩潰",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "S4-01 Domain Overview 不拋出例外",
+      "pass": true,
+      "detail": "1ms"
+    },
+    {
+      "name": "S4-02 有機關鍵字數 >= 0",
+      "pass": true,
+      "detail": "got=4505"
+    },
+    {
+      "name": "S4-03 有機流量 >= 0",
+      "pass": true,
+      "detail": "got=64325"
+    },
+    {
+      "name": "S4-04 Domain 欄位正確回傳",
+      "pass": true,
+      "detail": "got=semrush.com"
+    },
+    {
+      "name": "S4-05 semrush.com 有非零資料（國際域名應有數據）",
+      "pass": true,
+      "detail": "keys=4505 traffic=64325"
+    },
+    {
+      "name": "S5-01 Domain Organic 不拋出例外",
+      "pass": true,
+      "detail": "1ms"
+    },
+    {
+      "name": "S5-02 domain 欄位正確",
+      "pass": true,
+      "detail": "got=semrush.com"
+    },
+    {
+      "name": "S5-03 有機關鍵字列表非空 (>= 5)",
+      "pass": true,
+      "detail": "got=10"
+    },
+    {
+      "name": "S5-04 每筆結果均有 keyword 欄位",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "S5-05 每筆結果均有排名位置 (>= 0)",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "S5-06 至少一個關鍵字有搜尋量 > 0",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "S6-01 真實搜尋量可正常計算 ROI（不拋出例外）",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "S6-02 ROI 計算結果為有限數字",
+      "pass": true,
+      "detail": "total=143112"
+    },
+    {
+      "name": "S6-03 有真實搜尋量的關鍵字 >= 1",
+      "pass": true,
+      "detail": "got=4"
+    },
+    {
+      "name": "S6-04 排名提升後流量增益 >= 0",
+      "pass": true,
+      "detail": "SEO: vol=18100 gain=1412"
+    },
+    {
+      "name": "S6-05 KD 數據可用於機會評分（不為 NaN）",
+      "pass": true,
+      "detail": "SEO=55, WordPress=84, Google Analytics=98, Next.js=55"
+    },
+    {
+      "name": "S7-01 10 個關鍵字批次不拋出例外",
+      "pass": true,
+      "detail": "5ms"
+    },
+    {
+      "name": "S7-02 批次完成時間 < 60 秒（速率限制合理）",
+      "pass": true,
+      "detail": "5ms"
+    },
+    {
+      "name": "S7-03 回傳結果數 >= 5（至少半數成功）",
+      "pass": true,
+      "detail": "got=6/10"
+    },
+    {
+      "name": "S8-01 Agent 完整執行不拋出例外",
+      "pass": true,
+      "detail": "10630ms"
+    },
+    {
+      "name": "S8-02 回傳 >= 20 個關鍵字",
+      "pass": true,
+      "detail": "got=37"
+    },
+    {
+      "name": "S8-03 包含 SEMrush 擴展關鍵字（Metrics 非空）",
+      "pass": true,
+      "detail": "got 13 metrics"
+    },
+    {
+      "name": "S8-04 至少有 1 個具真實搜尋量的關鍵字",
+      "pass": true,
+      "detail": "13/13 have volume"
+    },
+    {
+      "name": "S8-05 Intent 分類包含商業/交易型意圖",
+      "pass": true,
+      "detail": "intents: commercial, commercial, transactional, commercial, informational, informational, informational, commercial, commercial, commercial, commercial, transactional"
+    }
+  ]
+}

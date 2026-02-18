@@ -21,6 +21,7 @@
     "test:quality": "tsx src/scripts/test-content-quality.ts",
     "test:highkd": "tsx src/scripts/test-edge-cases.ts",
     "test:roi": "tsx src/scripts/test-roi-tracking.ts",
+    "test:semrush": "tsx src/scripts/test-semrush-integration.ts",
     "test:full:utf8": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$OutputEncoding=[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new($false); [Console]::InputEncoding=[System.Text.UTF8Encoding]::new($false); chcp 65001 | Out-Null; pnpm exec tsx src/scripts/full-integration-test.ts\"",
     "test:gap": "tsx src/scripts/system-gap-validation.ts",
     "test:gap:utf8": "powershell -NoProfile -ExecutionPolicy Bypass -Command \"$OutputEncoding=[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new($false); [Console]::InputEncoding=[System.Text.UTF8Encoding]::new($false); chcp 65001 | Out-Null; pnpm exec tsx src/scripts/system-gap-validation.ts\"",

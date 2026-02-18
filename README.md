@@ -6,7 +6,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://www.postgresql.org/)
 
 > **專案狀態**: 全部優化任務完成 (100%)，編譯驗證通過，可進行正式部署。
-> **最後更新**: 2026-02-18 — 優化 v2 交付完成（25 項功能 + 6 項 code review 修正 + 2 項收尾）。
+> **最後更新**: 2026-02-19 — 優化 v2 交付完成（25 項功能 + 9 項 code review 修正 + 2 項收尾）。
 
 AISEO 是一個高度自動化、基於代理人框架 (Agentic Framework) 的企業級 SEO 優化平台。系統核心由 **12 個專業 AI 代理** (6 Smart Agents + 6 Auto Tasks) 組成，能自主完成關鍵字研究、排名追蹤、內容創作、技術審核及競爭對手分析。
 
@@ -388,7 +388,7 @@ pnpm sandbox:build    # docker build -t aiseo-agent-sandbox ./docker/agent-sandb
 
 ### Migration
 
-22 個 migration 檔案 (`apps/api/drizzle/0000–0021`)：
+25 個 migration 檔案 (`apps/api/drizzle/0000–0024`)：
 
 | 範圍 | Migrations | 說明 |
 |---|---|---|
@@ -396,6 +396,7 @@ pnpm sandbox:build    # docker build -t aiseo-agent-sandbox ./docker/agent-sandb
 | Phase 2 Agents | 0006–0008 | 代理相關表 |
 | Phase 3 Settings | 0009–0012 | Settings/RBAC/RLS (含 api_keys RLS WITH CHECK) |
 | Phase 4 Enterprise | 0013–0021 | tenant status, email verification, quotas, webhooks, project RBAC, audit logs, automated backups, perf indexes, webhook signing |
+| 補丁 | 0022–0024 | agent_memory HNSW 向量索引、Stripe billing 欄位、users.settings JSONB |
 
 ```powershell
 pnpm -C apps/api db:generate   # 建立新 migration
@@ -505,7 +506,7 @@ Middleware 在每個 HTTP request 自動 `SET app.current_tenant_id`（從 JWT �
 
 ## 🎯 優化 v2 — 2026-02-18 交付摘要
 
-本次優化涵蓋 25 項計畫任務與 8 項 code review 修復，所有變更均已通過 `pnpm -r build` 全端編譯驗證。
+本次優化涵蓋 25 項計畫任務與 11 項 code review 修復，所有變更均已通過 `pnpm -r build` 全端編譯驗證。
 
 ### 主要新增項目
 
@@ -537,7 +538,10 @@ Middleware 在每個 HTTP request 自動 `SET app.current_tenant_id`（從 JWT �
 | 🟢 | `server.ts` | `stopQuotaSync` / Redis 未在關閉時執行清理 |
 | 🔵 | `workers/dev-workers.ts` | 新增 `/health` HTTP server on :3002，修復 K8s liveness probe |
 | 🔵 | `outbox/dispatcher.ts` | cache invalidation 擴充至 `serp.rank.anomaly` + `report.ready` |
+| 🔴 | `.github/workflows/ci.yml` | `secrets` context 不可用於 job-level `if`；改為 `github.event_name`/`ref` 條件 + step-level 跳過邏輯 |
+| 🟠 | `lib/roi-engine.ts` → `routes/roi.ts` | CTR / seasonality 常數重複定義；改為 export 單一來源，`/api/roi/ctr-curves` 直接引用 |
+| 🟢 | `dashboard/roi/page.tsx` | 行 id 使用 `Date.now()` 可碰撞；改為 `crypto.randomUUID()` |
 
 ---
 
-*最後更新：2026-02-18*
+*最後更新：2026-02-19*

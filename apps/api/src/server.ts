@@ -254,11 +254,10 @@ fastify.get('/ws/events', { websocket: true }, async (connection, req) => {
   }
 });
 
-await fastify.listen({ port, host: '0.0.0.0' });
-
 // PERF-01: Start hourly quota counter sync from Redis → DB
 const stopQuotaSync = startQuotaSyncJob(() => pool.connect());
 
+// Must register onClose BEFORE listen() — Fastify v5 does not allow addHook after listen
 fastify.addHook('onClose', async () => {
   stopQuotaSync();
   try {
@@ -270,3 +269,5 @@ fastify.addHook('onClose', async () => {
   }
   _eventRedis.disconnect();
 });
+
+await fastify.listen({ port, host: '0.0.0.0' });

@@ -748,6 +748,12 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       settings: Record<string, unknown>;
     };
 
+    // Resolve default project for this tenant
+    const projectRow = await client.query(
+      'SELECT id FROM projects ORDER BY updated_at DESC, created_at DESC LIMIT 1',
+    );
+    const projectId = (projectRow.rowCount ?? 0) > 0 ? String(projectRow.rows[0].id) : '';
+
     return {
       ok: true,
       user: {
@@ -756,6 +762,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         name: user.name,
         avatarUrl: user.avatar_url,
         tenantId: decoded.tenantId,
+        projectId,
         role: decoded.role,
         emailVerified: !!user.email_verified_at,
         emailVerifiedAt: user.email_verified_at ? user.email_verified_at.toISOString() : null,

@@ -155,6 +155,27 @@
       "when": 1771297200000,
       "tag": "0021_phase4_webhooks_signing",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1771297800000,
+      "tag": "0022_agent_memory_vector_index",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1771298400000,
+      "tag": "0023_stripe_billing",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1771299000000,
+      "tag": "0024_users_settings",
+      "breakpoints": true
     }
   ]
 }

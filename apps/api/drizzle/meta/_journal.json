@@ -1,0 +1,160 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1771173073177,
+      "tag": "0000_windy_ender_wiggin",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1771173295045,
+      "tag": "0001_silky_forge",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1771173604663,
+      "tag": "0002_tearful_harpoon",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1771175767343,
+      "tag": "0003_chunky_paper_doll",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1771175820415,
+      "tag": "0004_giant_lilith",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1771177440913,
+      "tag": "0005_wooden_vance_astro",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1771180000000,
+      "tag": "0006_phase2_agents",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1771180001000,
+      "tag": "0007_phase2_batch_b",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1771180002000,
+      "tag": "0008_phase2_batch_c",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1771180003000,
+      "tag": "0009_phase3_settings_rbac",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1771180004000,
+      "tag": "0010_phase0_rls_with_check",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1771180005000,
+      "tag": "0011_phase2_rls_with_check",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1771180006000,
+      "tag": "0012_phase3_api_keys_rls_with_check",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1771180007000,
+      "tag": "0013_phase4_tenants_status",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1771292400000,
+      "tag": "0014_phase4_email_verification",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1771293000000,
+      "tag": "0015_phase4_tenant_usage",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1771294200000,
+      "tag": "0016_phase4_webhooks",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1771294800000,
+      "tag": "0017_phase4_project_rbac",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1771295400000,
+      "tag": "0018_phase4_audit_logs",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1771296000000,
+      "tag": "0019_phase4_automated_backups",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1771296600000,
+      "tag": "0020_phase4_perf_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1771297200000,
+      "tag": "0021_phase4_webhooks_signing",
+      "breakpoints": true
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "meta": {
+    "generatedAt": "2026-02-17T19:20:28.222Z",
+    "baseUrl": "http://localhost:3001",
+    "workspaceRoot": "C:\\Users\\User\\Desktop\\AISEO",
+    "textReportPath": "C:\\Users\\User\\Desktop\\AISEO\\test-results\\system-gap-validation-2026-02-17T19-20-13.log",
+    "jsonReportPath": "C:\\Users\\User\\Desktop\\AISEO\\test-results\\system-gap-validation-2026-02-17T19-20-13.json"
+  },
+  "summary": {
+    "pass": 6,
+    "fail": 3,
+    "skip": 0,
+    "total": 9
+  },
+  "checks": [
+    {
+      "id": "A1",
+      "name": "API health endpoint",
+      "status": "PASS",
+      "detail": "status=200",
+      "durationMs": 2
+    },
+    {
+      "id": "A2",
+      "name": "OpenAPI endpoint",
+      "status": "PASS",
+      "detail": "paths=86",
+      "durationMs": 4
+    },
+    {
+      "id": "B1",
+      "name": "RLS smoke test",
+      "status": "FAIL",
+      "detail": "Command failed: corepack pnpm -C apps/api db:rls-smoke\nC:\\Users\\User\\Desktop\\AISEO\\node_modules\\.pnpm\\pg-pool@3.11.0_pg@8.18.0\\node_modules\\pg-pool\\index.js:45\r\n    Error.captureStackTrace(err)\r\n          ^\r\n\r\nError: SASL: SCRAM-SERVER-FIRS",
+      "durationMs": 750
+    },
+    {
+      "id": "B2",
+      "name": "Outbox integration test",
+      "status": "PASS",
+      "detail": "outbox:test ok",
+      "durationMs": 901
+    },
+    {
+      "id": "B3",
+      "name": "Schedule smoke test",
+      "status": "FAIL",
+      "detail": "Command failed: corepack pnpm -C apps/api schedule:smoke\nC:\\Users\\User\\Desktop\\AISEO\\node_modules\\.pnpm\\pg-pool@3.11.0_pg@8.18.0\\node_modules\\pg-pool\\index.js:45\r\n    Error.captureStackTrace(err)\r\n          ^\r\n\r\nError: SASL: SCRAM-SERVER-FI",
+      "durationMs": 488
+    },
+    {
+      "id": "C1",
+      "name": "Browser engine smoke",
+      "status": "PASS",
+      "detail": "browser:smoke ok",
+      "durationMs": 2204
+    },
+    {
+      "id": "C2",
+      "name": "Docker sandbox smoke",
+      "status": "PASS",
+      "detail": "sandbox:smoke ok",
+      "durationMs": 1932
+    },
+    {
+      "id": "C3",
+      "name": "Backup restore test",
+      "status": "FAIL",
+      "detail": "Command failed: corepack pnpm -C apps/api backup:restore:test\nError: SASL: SCRAM-SERVER-FIRST-MESSAGE: client password must be a string\n    at C:\\Users\\User\\Desktop\\AISEO\\node_modules\\.pnpm\\pg-pool@3.11.0_pg@8.18.0\\node_modules\\pg-pool\\inde",
+      "durationMs": 632
+    },
+    {
+      "id": "D1",
+      "name": "Phase1 E2E scenario",
+      "status": "PASS",
+      "detail": "phase1:e2e ok",
+      "durationMs": 7679
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "meta": {
+    "generatedAt": "2026-02-17T19:11:28.980Z",
+    "baseUrl": "http://localhost:3001",
+    "workspaceRoot": "C:\\Users\\User\\Desktop\\AISEO",
+    "textReportPath": "C:\\Users\\User\\Desktop\\AISEO\\test-results\\system-gap-validation-2026-02-17T19-11-19.log",
+    "jsonReportPath": "C:\\Users\\User\\Desktop\\AISEO\\test-results\\system-gap-validation-2026-02-17T19-11-19.json"
+  },
+  "summary": {
+    "pass": 4,
+    "fail": 4,
+    "skip": 1,
+    "total": 9
+  },
+  "checks": [
+    {
+      "id": "A1",
+      "name": "API health endpoint",
+      "status": "PASS",
+      "detail": "status=200",
+      "durationMs": 2
+    },
+    {
+      "id": "A2",
+      "name": "OpenAPI endpoint",
+      "status": "PASS",
+      "detail": "paths=86",
+      "durationMs": 10
+    },
+    {
+      "id": "B1",
+      "name": "RLS smoke test",
+      "status": "FAIL",
+      "detail": "Command failed: corepack pnpm -C apps/api db:rls-smoke\nC:\\Users\\User\\Desktop\\AISEO\\node_modules\\.pnpm\\pg-pool@3.11.0_pg@8.18.0\\node_modules\\pg-pool\\index.js:45\r\n    Error.captureStackTrace(err)\r\n          ^\r\n\r\nError: connect ECONNREFUSED 12",
+      "durationMs": 498
+    },
+    {
+      "id": "B2",
+      "name": "Outbox integration test",
+      "status": "FAIL",
+      "detail": "Command failed: corepack pnpm -C apps/api outbox:test\nC:\\Users\\User\\Desktop\\AISEO\\node_modules\\.pnpm\\pg-pool@3.11.0_pg@8.18.0\\node_modules\\pg-pool\\index.js:45\r\n    Error.captureStackTrace(err)\r\n          ^\r\n\r\nError: connect ECONNREFUSED 127",
+      "durationMs": 454
+    },
+    {
+      "id": "B3",
+      "name": "Schedule smoke test",
+      "status": "FAIL",
+      "detail": "Command failed: corepack pnpm -C apps/api schedule:smoke\nC:\\Users\\User\\Desktop\\AISEO\\node_modules\\.pnpm\\pg-pool@3.11.0_pg@8.18.0\\node_modules\\pg-pool\\index.js:45\r\n    Error.captureStackTrace(err)\r\n          ^\r\n\r\nError: connect ECONNREFUSED ",
+      "durationMs": 465
+    },
+    {
+      "id": "C1",
+      "name": "Browser engine smoke",
+      "status": "PASS",
+      "detail": "browser:smoke ok",
+      "durationMs": 4950
+    },
+    {
+      "id": "C2",
+      "name": "Docker sandbox smoke",
+      "status": "PASS",
+      "detail": "sandbox:smoke ok",
+      "durationMs": 2345
+    },
+    {
+      "id": "C3",
+      "name": "Backup restore test",
+      "status": "SKIP",
+      "detail": "BACKUP_ENABLED != true",
+      "durationMs": 0
+    },
+    {
+      "id": "D1",
+      "name": "Phase1 E2E scenario",
+      "status": "FAIL",
+      "detail": "Command failed: corepack pnpm -C apps/api phase1:e2e\nC:\\Users\\User\\Desktop\\AISEO\\apps\\api\\src\\scripts\\phase1-e2e.ts:15\r\n    throw new Error(`${method} ${url} -> ${res.status} ${res.statusText}: ${text",
+      "durationMs": 469
+    }
+  ]
+}

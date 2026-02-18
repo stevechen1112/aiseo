@@ -1,0 +1,10 @@
+node_modules
+**/node_modules
+.git
+.github
+.vscode
+**/.next
+**/dist
+**/tmp
+**/*.log
+.DS_Store

@@ -1,0 +1,80 @@
+{
+  "meta": {
+    "generatedAt": "2026-02-17T19:19:55.596Z",
+    "baseUrl": "http://localhost:3001",
+    "workspaceRoot": "C:\\Users\\User\\Desktop\\AISEO",
+    "textReportPath": "C:\\Users\\User\\Desktop\\AISEO\\test-results\\system-gap-validation-2026-02-17T19-19-29.log",
+    "jsonReportPath": "C:\\Users\\User\\Desktop\\AISEO\\test-results\\system-gap-validation-2026-02-17T19-19-29.json"
+  },
+  "summary": {
+    "pass": 8,
+    "fail": 1,
+    "skip": 0,
+    "total": 9
+  },
+  "checks": [
+    {
+      "id": "A1",
+      "name": "API health endpoint",
+      "status": "PASS",
+      "detail": "status=200",
+      "durationMs": 1
+    },
+    {
+      "id": "A2",
+      "name": "OpenAPI endpoint",
+      "status": "PASS",
+      "detail": "paths=86",
+      "durationMs": 3
+    },
+    {
+      "id": "B1",
+      "name": "RLS smoke test",
+      "status": "FAIL",
+      "detail": "Command failed: corepack pnpm -C apps/api db:rls-smoke\nC:\\Users\\User\\Desktop\\AISEO\\apps\\api\\src\\scripts\\rls-smoke.ts:182\r\n    throw new Error('RLS failure: tenant1 can read tenant2 project by id');\r\n          ^\r\n\r\n\r\nError: RLS failure: tena",
+      "durationMs": 764
+    },
+    {
+      "id": "B2",
+      "name": "Outbox integration test",
+      "status": "PASS",
+      "detail": "outbox:test ok",
+      "durationMs": 961
+    },
+    {
+      "id": "B3",
+      "name": "Schedule smoke test",
+      "status": "PASS",
+      "detail": "schedule:smoke ok",
+      "durationMs": 478
+    },
+    {
+      "id": "C1",
+      "name": "Browser engine smoke",
+      "status": "PASS",
+      "detail": "browser:smoke ok",
+      "durationMs": 2167
+    },
+    {
+      "id": "C2",
+      "name": "Docker sandbox smoke",
+      "status": "PASS",
+      "detail": "sandbox:smoke ok",
+      "durationMs": 2219
+    },
+    {
+      "id": "C3",
+      "name": "Backup restore test",
+      "status": "PASS",
+      "detail": "backup:restore:test ok",
+      "durationMs": 11553
+    },
+    {
+      "id": "D1",
+      "name": "Phase1 E2E scenario",
+      "status": "PASS",
+      "detail": "phase1:e2e ok",
+      "durationMs": 7691
+    }
+  ]
+}

@@ -1,0 +1,575 @@
+{
+  "meta": {
+    "timestamp": "2026-02-17T19:09:12.260Z",
+    "nodeVersion": "v22.18.0",
+    "platform": "win32 x64",
+    "coreVersion": "0.1.0",
+    "ollamaModel": "gemma3:27b",
+    "redisUrl": "redis://127.0.0.1:6379",
+    "logFile": "C:\\Users\\User\\Desktop\\AISEO\\test-results\\full-integration-2026-02-17T19-07-13.log",
+    "jsonFile": "C:\\Users\\User\\Desktop\\AISEO\\test-results\\full-integration-2026-02-17T19-07-13.json"
+  },
+  "summary": {
+    "totalAssertions": 103,
+    "passed": 101,
+    "failed": 2,
+    "totalDurationMs": 118905,
+    "sections": 27
+  },
+  "durations": {
+    "T1": 2217,
+    "T2": 7099,
+    "T3": 4987,
+    "T4": 14716,
+    "T5": 27320,
+    "T6-01": 0,
+    "T6-02": 269,
+    "T6-03": 970,
+    "T7": 37,
+    "T8": 13780,
+    "T9": 74,
+    "T9-gen": 0,
+    "T10": 1528,
+    "T11": 14,
+    "T12-overview": 245,
+    "T12-organic": 258,
+    "T13": 39988,
+    "T14-01": 1,
+    "T14-02": 0,
+    "T14-03": 660,
+    "T15": 8,
+    "T15-wait": 2056,
+    "T16": 57,
+    "T17": 33,
+    "T22": 1009,
+    "T23": 271,
+    "T24": 12
+  },
+  "assertions": [
+    {
+      "name": "T1-01 API 回傳至少 1 筆",
+      "pass": true,
+      "detail": "got 3"
+    },
+    {
+      "name": "T1-02 searchVolume 為非負整數",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T1-03 KD 範圍 0-100",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T1-04 CPC 為非負數",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T2-01 實體 >= 3 個",
+      "pass": true,
+      "detail": "got 7"
+    },
+    {
+      "name": "T2-02 情感分數 -1~1",
+      "pass": true,
+      "detail": "score=0.8"
+    },
+    {
+      "name": "T2-03 salience 總和 ≈ 1.0",
+      "pass": true,
+      "detail": "sum=1.000"
+    },
+    {
+      "name": "T2-04 關鍵詞 >= 3 個",
+      "pass": true,
+      "detail": "got 8"
+    },
+    {
+      "name": "T3-01 回傳至少 5 筆自然結果",
+      "pass": true,
+      "detail": "got 9"
+    },
+    {
+      "name": "T3-02 每筆含 title + link",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T4-01 關鍵詞 >= 10 組",
+      "pass": true,
+      "detail": "got 27"
+    },
+    {
+      "name": "T4-02 含種子關鍵詞",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T4-03 實體已提取",
+      "pass": true,
+      "detail": "got 2"
+    },
+    {
+      "name": "T4-04 意圖已分類",
+      "pass": true,
+      "detail": "got 12"
+    },
+    {
+      "name": "T4-05 意圖 confidence 0~1",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T4-06 至少 2 種意圖類型",
+      "pass": true,
+      "detail": "types: informational, commercial, transactional"
+    },
+    {
+      "name": "T5-01 字數 >= 1000",
+      "pass": true,
+      "detail": "got 1754"
+    },
+    {
+      "name": "T5-02 SEO >= 70",
+      "pass": true,
+      "detail": "got 100"
+    },
+    {
+      "name": "T5-03 大綱 >= 5 段",
+      "pass": true,
+      "detail": "got 7"
+    },
+    {
+      "name": "T5-04 章節數 >= 3",
+      "pass": true,
+      "detail": "got 7"
+    },
+    {
+      "name": "T5-05 標題非空",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T5-06 Meta 80-200 字",
+      "pass": true,
+      "detail": "len=171"
+    },
+    {
+      "name": "T5-07 SEO 分數與手動計算一致",
+      "pass": true,
+      "detail": "expected=100 actual=100"
+    },
+    {
+      "name": "T6-01 空輸入不崩潰",
+      "pass": true,
+      "detail": "回傳 0 筆"
+    },
+    {
+      "name": "T6-02 不存在關鍵字回傳 0 筆",
+      "pass": true,
+      "detail": "got 0"
+    },
+    {
+      "name": "T6-03 極短文本不崩潰",
+      "pass": true,
+      "detail": "entities=0"
+    },
+    {
+      "name": "T7-01 Performance 0-100",
+      "pass": false,
+      "detail": "Error: PageSpeed Insights API error: 429 — {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"Quota exceeded for quota metric 'Queries' and limit 'Queries per day' of service 'pagespeedonline.googleapis."
+    },
+    {
+      "name": "T8-01 organic 結果 >= 5",
+      "pass": true,
+      "detail": "got 9"
+    },
+    {
+      "name": "T8-02 每筆含 title+link",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T8-03 position 為正整數",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T8-04 trackedPosition 已回傳",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T9-01 detect 不崩潰",
+      "pass": true,
+      "detail": "schemas=1"
+    },
+    {
+      "name": "T9-02 回傳 summary",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T9-03 generate 產出 code",
+      "pass": true,
+      "detail": "len=228"
+    },
+    {
+      "name": "T9-04 generate isValid",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T10-01 audit 不崩潰",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T10-02 lighthouseScores 已回傳",
+      "pass": false,
+      "detail": ""
+    },
+    {
+      "name": "T10-03 CWV LCP >= 0",
+      "pass": true,
+      "detail": "lcp=undefined"
+    },
+    {
+      "name": "T10-04 meta 檢查已執行",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T11-01 crawl >= 1 page",
+      "pass": true,
+      "detail": "got 1"
+    },
+    {
+      "name": "T11-02 page 含 title",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T11-03 page 含 wordCount",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T11-04 stats 完整",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T12-01 organicKeywords >= 0",
+      "pass": true,
+      "detail": "got 1347110"
+    },
+    {
+      "name": "T12-02 organicTraffic >= 0",
+      "pass": true,
+      "detail": "got 34130649"
+    },
+    {
+      "name": "T12-03 domain_organic 回傳 >= 1",
+      "pass": true,
+      "detail": "got 5"
+    },
+    {
+      "name": "T12-04 keyword 含 position",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T13-01 工作流完整執行",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T13-02 關鍵字有傳遞到 ContentWriter",
+      "pass": true,
+      "detail": "primary=Next.js 性能优化"
+    },
+    {
+      "name": "T13-03 關鍵字數量 >= 3",
+      "pass": true,
+      "detail": "got 5"
+    },
+    {
+      "name": "T13-04 文章字數 >= 800",
+      "pass": true,
+      "detail": "got 1616"
+    },
+    {
+      "name": "T13-05 EventBus 有新事件",
+      "pass": true,
+      "detail": "delta=4"
+    },
+    {
+      "name": "T13-06 含 started/completed 事件",
+      "pass": true,
+      "detail": "types=agent.task.started, agent.task.completed"
+    },
+    {
+      "name": "T14-01 空 topic 應拋錯",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T14-02 空 keyword 應拋錯",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T14-03 錯誤後仍可繼續執行",
+      "pass": true,
+      "detail": "metrics=1"
+    },
+    {
+      "name": "T14-04 失敗事件已發佈",
+      "pass": true,
+      "detail": "types=agent.task.started, agent.task.completed, agent.task.failed"
+    },
+    {
+      "name": "T15-00 Redis reachable",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T15-01 flows submitted",
+      "pass": true,
+      "detail": "got 2"
+    },
+    {
+      "name": "T15-02 maxActive >= 3 (parallelism)",
+      "pass": true,
+      "detail": "maxActive=5"
+    },
+    {
+      "name": "T15-03 events for tenant-A",
+      "pass": true,
+      "detail": "count=26"
+    },
+    {
+      "name": "T15-04 events for tenant-B",
+      "pass": true,
+      "detail": "count=26"
+    },
+    {
+      "name": "T15-05 retry emits failed(willRetry=true)",
+      "pass": true,
+      "detail": "got 2"
+    },
+    {
+      "name": "T15-06 retry job eventually completed",
+      "pass": true,
+      "detail": "got 2"
+    },
+    {
+      "name": "T16-01 回傳 suggestions 陣列",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T16-02 suggestions >= 3",
+      "pass": true,
+      "detail": "got 10"
+    },
+    {
+      "name": "T16-03 每項為字串",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T17-01 status 200",
+      "pass": true,
+      "detail": "200"
+    },
+    {
+      "name": "T17-02 ok = true",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T17-03 body 含 HTML",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T18-01 預設工具 >= 10",
+      "pass": true,
+      "detail": "got 14"
+    },
+    {
+      "name": "T18-02 Tool not found 拋錯",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T18-03 URL allowlist 攔截非授權域",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T18-04 授權域通過驗證",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T18-05 allowlist 交集正確",
+      "pass": true,
+      "detail": "got google.com"
+    },
+    {
+      "name": "T19-01 有效 DAG 解析正確",
+      "pass": true,
+      "detail": "got 4"
+    },
+    {
+      "name": "T19-02 依賴關係正確",
+      "pass": true,
+      "detail": "research"
+    },
+    {
+      "name": "T19-03 循環偵測拋錯",
+      "pass": true,
+      "detail": "Error: Cycle detected: a -> b -> c -> a"
+    },
+    {
+      "name": "T19-04 重複節點拋錯",
+      "pass": true,
+      "detail": "Error: Duplicate node id: a"
+    },
+    {
+      "name": "T19-05 缺失依賴拋錯",
+      "pass": true,
+      "detail": "Error: Missing dependency node: nonexistent (required by a)"
+    },
+    {
+      "name": "T20-01 工作空間已建立",
+      "pass": true,
+      "detail": "C:\\Users\\User\\AppData\\Local\\Temp\\aiseo\\workspaces\\test-agent\\test-run-001"
+    },
+    {
+      "name": "T20-02 agentId 正確",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T20-03 runId 正確",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T20-04 cleanup 已移除目錄",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T21-01 SEO Pipeline 含子任務",
+      "pass": true,
+      "detail": "children=1"
+    },
+    {
+      "name": "T21-02 Monitoring Flow 含子任務",
+      "pass": true,
+      "detail": "children=5"
+    },
+    {
+      "name": "T21-03 Audit Flow 含子任務",
+      "pass": true,
+      "detail": "children=9"
+    },
+    {
+      "name": "T21-04 Local SEO Flow 含子任務",
+      "pass": true,
+      "detail": "children=2"
+    },
+    {
+      "name": "T21-05 getWorkflowDefinition 回傳定義",
+      "pass": true,
+      "detail": "name=SEO Content Pipeline"
+    },
+    {
+      "name": "T21-06 不存在的 workflow 回傳 null",
+      "pass": true,
+      "detail": "got null"
+    },
+    {
+      "name": "T22-01 分析完成",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T22-02 含建議或分析結果",
+      "pass": true,
+      "detail": "recommendations=2 gaps=50"
+    },
+    {
+      "name": "T23-01 crawl 完成",
+      "pass": true,
+      "detail": "pages=1"
+    },
+    {
+      "name": "T23-02 crawlSummary 完整",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T24-01 check 完成",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T24-02 summary 完整",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T25-01 排程已建立",
+      "pass": true,
+      "detail": "got 1"
+    },
+    {
+      "name": "T25-02 排程含 cron pattern",
+      "pass": true,
+      "detail": "patterns=0 9 * * 1"
+    },
+    {
+      "name": "T25-03 排程已刪除",
+      "pass": true,
+      "detail": "got 0"
+    },
+    {
+      "name": "T26-01 tenant-A 收到自己的事件",
+      "pass": true,
+      "detail": "got 1"
+    },
+    {
+      "name": "T26-02 tenant-B 收到自己的事件",
+      "pass": true,
+      "detail": "got 1"
+    },
+    {
+      "name": "T26-03 tenant-A 未收到 tenant-B 事件",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "name": "T26-04 subscribeAll 收全部",
+      "pass": true,
+      "detail": "got 2"
+    }
+  ],
+  "failedAssertions": [
+    {
+      "name": "T7-01 Performance 0-100",
+      "detail": "Error: PageSpeed Insights API error: 429 — {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"Quota exceeded for quota metric 'Queries' and limit 'Queries per day' of service 'pagespeedonline.googleapis."
+    },
+    {
+      "name": "T10-02 lighthouseScores 已回傳",
+      "detail": ""
+    }
+  ]
+}

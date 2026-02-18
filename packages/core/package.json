@@ -1,0 +1,24 @@
+{
+  "name": "@aiseo/core",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "bullmq": "^5.58.5",
+    "cheerio": "^1.2.0",
+    "ioredis": "5.9.2",
+    "nodemailer": "^8.0.1",
+    "playwright": "^1.51.1",
+    "yaml": "^2.7.1",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/nodemailer": "^7.0.10",
+    "typescript": "^5.7.3"
+  }
+}

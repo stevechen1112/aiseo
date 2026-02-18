@@ -1,0 +1,80 @@
+{
+  "meta": {
+    "generatedAt": "2026-02-17T19:13:10.516Z",
+    "baseUrl": "http://localhost:3001",
+    "workspaceRoot": "C:\\Users\\User\\Desktop\\AISEO",
+    "textReportPath": "C:\\Users\\User\\Desktop\\AISEO\\test-results\\system-gap-validation-2026-02-17T19-12-56.log",
+    "jsonReportPath": "C:\\Users\\User\\Desktop\\AISEO\\test-results\\system-gap-validation-2026-02-17T19-12-56.json"
+  },
+  "summary": {
+    "pass": 6,
+    "fail": 2,
+    "skip": 1,
+    "total": 9
+  },
+  "checks": [
+    {
+      "id": "A1",
+      "name": "API health endpoint",
+      "status": "PASS",
+      "detail": "status=200",
+      "durationMs": 2
+    },
+    {
+      "id": "A2",
+      "name": "OpenAPI endpoint",
+      "status": "PASS",
+      "detail": "paths=86",
+      "durationMs": 4
+    },
+    {
+      "id": "B1",
+      "name": "RLS smoke test",
+      "status": "FAIL",
+      "detail": "Command failed: corepack pnpm -C apps/api db:rls-smoke\nC:\\Users\\User\\Desktop\\AISEO\\apps\\api\\src\\scripts\\rls-smoke.ts:152\r\n    throw new Error('RLS failure: unexpected project visibility');\r\n          ^\r\n\r\n\r\nError: RLS failure: unexpected pr",
+      "durationMs": 770
+    },
+    {
+      "id": "B2",
+      "name": "Outbox integration test",
+      "status": "PASS",
+      "detail": "outbox:test ok",
+      "durationMs": 891
+    },
+    {
+      "id": "B3",
+      "name": "Schedule smoke test",
+      "status": "FAIL",
+      "detail": "Command failed: corepack pnpm -C apps/api schedule:smoke\nC:\\Users\\User\\Desktop\\AISEO\\node_modules\\.pnpm\\pg@8.18.0\\node_modules\\pg\\lib\\client.js:624\r\n          Error.captureStackTrace(err)\r\n                ^\r\n\r\nerror: new row violates row-le",
+      "durationMs": 472
+    },
+    {
+      "id": "C1",
+      "name": "Browser engine smoke",
+      "status": "PASS",
+      "detail": "browser:smoke ok",
+      "durationMs": 2173
+    },
+    {
+      "id": "C2",
+      "name": "Docker sandbox smoke",
+      "status": "PASS",
+      "detail": "sandbox:smoke ok",
+      "durationMs": 2189
+    },
+    {
+      "id": "C3",
+      "name": "Backup restore test",
+      "status": "SKIP",
+      "detail": "BACKUP_ENABLED != true",
+      "durationMs": 0
+    },
+    {
+      "id": "D1",
+      "name": "Phase1 E2E scenario",
+      "status": "PASS",
+      "detail": "phase1:e2e ok",
+      "durationMs": 7682
+    }
+  ]
+}

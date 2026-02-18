@@ -1,0 +1,33 @@
+{
+  "name": "aiseo",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "pnpm": {
+    "overrides": {
+      "ioredis": "5.9.2"
+    }
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "format": "prettier -w .",
+    "typecheck": "tsc -b",
+    "dev": "pnpm -C apps/api dev",
+    "build": "pnpm -r build",
+    "smoke:phase0-3": "powershell -ExecutionPolicy Bypass -File scripts/smoke-phase0-3.ps1",
+    "regress:phase0-3": "powershell -ExecutionPolicy Bypass -File scripts/regression-phase0-3.ps1",
+    "sandbox:build": "docker build -t aiseo-agent-sandbox ./docker/agent-sandbox"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.19.0",
+    "@types/node": "^22.13.0",
+    "eslint": "^9.19.0",
+    "eslint-config-prettier": "^10.0.1",
+    "globals": "^15.14.0",
+    "prettier": "^3.5.1",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.22.0"
+  }
+}

@@ -1,0 +1,70 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: aiseo-postgres
+    environment:
+      POSTGRES_DB: aiseo
+      POSTGRES_USER: aiseo
+      POSTGRES_PASSWORD: aiseo
+    ports:
+      - '5433:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U aiseo -d aiseo']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7
+    container_name: aiseo-redis
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    container_name: aiseo-api
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgresql://aiseo:aiseo@postgres:5432/aiseo
+      REDIS_URL: redis://redis:6379
+      # JWT_SECRET: change-me
+      # PLATFORM_ADMIN_SECRET: change-me
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - '3001:3001'
+
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    container_name: aiseo-web
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # Keep same-origin /api rewrites (empty NEXT_PUBLIC_API_URL)
+      NEXT_PUBLIC_API_URL: ''
+    depends_on:
+      - api
+    ports:
+      - '3000:3000'
+
+volumes:
+  postgres_data:
+  redis_data:

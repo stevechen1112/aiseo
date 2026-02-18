@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, master]
 
 jobs:
   build:
@@ -31,3 +31,89 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  # ── Unit-style script tests (no DB / Redis required) ──────────────────────
+  test-quality:
+    name: Content Quality Tests
+    runs-on: ubuntu-latest
+    needs: build
+    env:
+      GOOGLE_GENERATIVE_AI_API_KEY: ${{ secrets.GOOGLE_GENERATIVE_AI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile=false
+      - name: Run content quality tests
+        working-directory: apps/api
+        run: pnpm test:quality
+
+  test-highkd:
+    name: High-KD Edge Case Tests
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile=false
+      - name: Run high-KD edge case tests
+        working-directory: apps/api
+        run: pnpm test:highkd
+
+  test-roi:
+    name: ROI Engine Tests
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile=false
+      - name: Run ROI tracking tests
+        working-directory: apps/api
+        run: pnpm test:roi
+
+  # ── SEMrush integration (requires real API key — runs on push to master only) ──
+  test-semrush:
+    name: SEMrush Integration Tests
+    runs-on: ubuntu-latest
+    needs: build
+    # Only run when the secret is available (skips on forks / PRs without secret)
+    if: ${{ secrets.SEMRUSH_API_KEY != '' }}
+    env:
+      SEMRUSH_API_KEY: ${{ secrets.SEMRUSH_API_KEY }}
+      SEMRUSH_DATABASE: tw
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile=false
+      - name: Run SEMrush integration tests
+        working-directory: apps/api
+        run: pnpm test:semrush
+

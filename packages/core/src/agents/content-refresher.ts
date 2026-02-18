@@ -149,7 +149,7 @@ export class ContentRefresherAgent extends BaseAgent<ContentRefresherAgentInput,
         const lastModifiedHeader = res.headers.get('last-modified');
         let lastUpdated: string;
         if (lastModifiedHeader) {
-          lastUpdated = new Date(lastModifiedHeader).toISOString().split('T')[0];
+          lastUpdated = new Date(lastModifiedHeader).toISOString().split('T')[0] ?? '';
         } else {
           // Try article:modified_time or dateModified meta
           const metaDate =
@@ -157,7 +157,7 @@ export class ContentRefresherAgent extends BaseAgent<ContentRefresherAgentInput,
             $('meta[property="article:published_time"]').attr('content') ??
             $('time[datetime]').first().attr('datetime') ??
             '';
-          lastUpdated = metaDate ? new Date(metaDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+          lastUpdated = metaDate ? (new Date(metaDate).toISOString().split('T')[0] ?? '') : (new Date().toISOString().split('T')[0] ?? '');
         }
 
         const daysSinceUpdate = Math.floor(

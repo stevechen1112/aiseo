@@ -50,9 +50,21 @@ const envSchema = z
   // API Key Management (Phase 3 - 4.10)
   API_KEY_ENCRYPTION_SECRET: optionalNonEmptyString(),
 
-  // Auth (JWT)
-  JWT_SECRET: optionalNonEmptyString(),
-  JWT_REFRESH_SECRET: optionalNonEmptyString(),
+  // Auth (JWT) — must be at least 32 chars; set in .env.example
+  JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
+  JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 characters'),
+
+  // Stripe billing
+  STRIPE_SECRET_KEY: optionalNonEmptyString(),
+  STRIPE_WEBHOOK_SECRET: optionalNonEmptyString(),
+  STRIPE_PRICE_STARTER: optionalNonEmptyString(),
+  STRIPE_PRICE_PRO: optionalNonEmptyString(),
+  STRIPE_PRICE_TEAM: optionalNonEmptyString(),
+
+  // OpenTelemetry
+  // Set OTEL_EXPORTER_OTLP_ENDPOINT to enable distributed tracing (e.g. http://localhost:4318)
+  OTEL_EXPORTER_OTLP_ENDPOINT: optionalNonEmptyString(),
+  OTEL_SERVICE_NAME: z.string().default('aiseo-api'),
 
   // Platform Admin (Phase 4)
   // Used to access /api/platform/* routes that must bypass per-tenant RLS.
@@ -150,9 +162,8 @@ const envSchema = z
       }
     };
 
-    // Prevent accidental use of hard-coded dev secrets in production.
-    requireInProd('JWT_SECRET', 'JWT_SECRET is required in production');
-    requireInProd('JWT_REFRESH_SECRET', 'JWT_REFRESH_SECRET is required in production');
+    // JWT_SECRET and JWT_REFRESH_SECRET are now required in ALL environments (z.string().min(32)).
+    // Only API_KEY_ENCRYPTION_SECRET remains production-only optional.
     requireInProd('API_KEY_ENCRYPTION_SECRET', 'API_KEY_ENCRYPTION_SECRET is required in production');
   });
 

@@ -30,6 +30,21 @@ services:
       timeout: 5s
       retries: 20
 
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    container_name: aiseo-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: 'true'
+    ports:
+      - '16686:16686'   # Jaeger UI
+      - '4318:4318'     # OTLP HTTP receiver
+      - '4317:4317'     # OTLP gRPC receiver
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:16686/ || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   postgres_data:
   redis_data:

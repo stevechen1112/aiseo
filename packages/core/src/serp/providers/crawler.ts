@@ -97,7 +97,8 @@ export class SelfHostedCrawlerProvider implements SerpProvider {
     let position = 0;
     for (const match of matches) {
       const url = match[1];
-      
+      if (!url) continue;
+
       // Skip Google internal links and ads
       if (url.includes('google.com') || url.startsWith('/') || url.includes('googleadservices')) {
         continue;

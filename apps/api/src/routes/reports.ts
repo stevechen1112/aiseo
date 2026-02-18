@@ -1,24 +1,22 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { buildReportHtml, createMinimalPdf, renderHtmlToPdf, type WhiteLabelConfig } from '@aiseo/core';
+import { AppError, requireDb, resolveDefaultProjectId } from '../utils/index.js';
 
-async function requireDb(req: { dbClient?: import('pg').PoolClient }) {
-  if (!req.dbClient) {
-    const error = new Error('DB not available');
-    (error as Error & { statusCode: number }).statusCode = 500;
-    throw error;
-  }
-  return req.dbClient;
+// ---------------------------------------------------------------------------
+// CSV helper
+// ---------------------------------------------------------------------------
+function toCsvRow(cells: (string | number | null | undefined)[]): string {
+  return cells
+    .map((c) => {
+      const s = c === null || c === undefined ? '' : String(c);
+      return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    })
+    .join(',');
 }
 
-async function resolveDefaultProjectId(client: import('pg').PoolClient): Promise<string> {
-  const row = await client.query('SELECT id FROM projects ORDER BY updated_at DESC, created_at DESC LIMIT 1');
-  if (row.rowCount === 0) {
-    const error = new Error('No project found for tenant');
-    (error as Error & { statusCode: number }).statusCode = 404;
-    throw error;
-  }
-  return String(row.rows[0].id);
+function buildCsv(headers: string[], rows: (string | number | null | undefined)[][]): string {
+  return [toCsvRow(headers), ...rows.map(toCsvRow)].join('\r\n');
 }
 
 function safeJsonObject(input: unknown): Record<string, unknown> {
@@ -151,10 +149,12 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
       schema: {
         tags: ['reports'],
         description:
-          'Download a report PDF by generated report UUID or report_id key.\n\n' +
+          'Download a report in PDF or CSV format.\n\n' +
+          'Add `?format=csv` for CSV output (default: pdf).\n\n' +
           'curl:\n' +
           '```bash\n' +
-          'curl -L -H "Authorization: Bearer <ACCESS_TOKEN>" http://localhost:3001/api/reports/<ID>/download --output report.pdf\n' +
+          'curl -L -H "Authorization: Bearer <ACCESS_TOKEN>" "http://localhost:3001/api/reports/<ID>/download?format=pdf" --output report.pdf\n' +
+          'curl -L -H "Authorization: Bearer <ACCESS_TOKEN>" "http://localhost:3001/api/reports/<ID>/download?format=csv" --output report.csv\n' +
           '```\n',
         params: {
           type: 'object',
@@ -162,8 +162,13 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
           required: ['id'],
           additionalProperties: true,
         },
+        querystring: {
+          type: 'object',
+          properties: { format: { type: 'string', enum: ['pdf', 'csv'], default: 'pdf' } },
+          additionalProperties: true,
+        },
         response: {
-          200: { description: 'PDF binary', type: 'string', format: 'binary' },
+          200: { description: 'File binary', type: 'string', format: 'binary' },
         },
       },
     },
@@ -171,6 +176,7 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
     const client = await requireDb(req);
     const projectId = await resolveDefaultProjectId(client);
     const params = reportIdOrKeyParams.parse((req as any).params ?? {});
+    const format = ((req as any).query?.format ?? 'pdf') as 'pdf' | 'csv';
 
     const isUuid = reportIdParams.safeParse(params).success;
     const row = isUuid
@@ -191,13 +197,31 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
         );
 
     if (row.rowCount === 0) {
-      const error = new Error('Report not found');
-      (error as Error & { statusCode: number }).statusCode = 404;
-      throw error;
+      throw AppError.notFound('Report not found');
     }
 
     const r = row.rows[0] as any;
+    const reportId = String(r.report_id);
+    const range = { start: String(r.start_date), end: String(r.end_date) };
 
+    // ------------------------------------------------------------------
+    // CSV format
+    // ------------------------------------------------------------------
+    if (format === 'csv') {
+      const csvData = buildCsv(
+        ['report_id', 'report_format', 'start_date', 'end_date', 'generated_at'],
+        [[reportId, String(r.report_format), range.start, range.end, String(r.generated_at ?? '')]],
+      );
+      const buf = Buffer.from(csvData, 'utf-8');
+      reply.header('content-type', 'text/csv; charset=utf-8');
+      reply.header('content-disposition', `attachment; filename="${reportId}.csv"`);
+      reply.header('content-length', String(buf.byteLength));
+      return reply.send(buf);
+    }
+
+    // ------------------------------------------------------------------
+    // PDF format (existing logic)
+    // ------------------------------------------------------------------
     const tenantId = req.tenantId;
     let branding: WhiteLabelConfig | undefined;
     if (tenantId) {
@@ -216,12 +240,11 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
     }
 
     const title = typeof (branding as any)?.companyName === 'string' ? `${branding!.companyName} Report` : 'AISEO Report';
-    const range = { start: String(r.start_date), end: String(r.end_date) };
     const sections = [
       {
         heading: 'Summary',
         content: `<table>
-  <tr><th>Report ID</th><td>${String(r.report_id)}</td></tr>
+  <tr><th>Report ID</th><td>${reportId}</td></tr>
   <tr><th>Format</th><td>${String(r.report_format)}</td></tr>
   <tr><th>Period</th><td>${range.start} to ${range.end}</td></tr>
 </table>`,
@@ -239,12 +262,12 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
       pdf = await renderHtmlToPdf({ html, format: 'A4' });
     } catch (err) {
       req.log?.warn?.({ err }, 'renderHtmlToPdf failed; falling back to minimal PDF');
-      const fallbackText = `${title}\nReport ${String(r.report_id)} | ${String(r.report_format)}\n${range.start} to ${range.end}`;
+      const fallbackText = `${title}\nReport ${reportId} | ${String(r.report_format)}\n${range.start} to ${range.end}`;
       pdf = createMinimalPdf(fallbackText);
     }
 
     reply.header('content-type', 'application/pdf');
-    reply.header('content-disposition', `attachment; filename="${String(r.report_id)}.pdf"`);
+    reply.header('content-disposition', `attachment; filename="${reportId}.pdf"`);
     reply.header('content-length', String(pdf.byteLength));
     return reply.send(pdf);
     },
@@ -353,6 +376,191 @@ export const reportsRoutes: FastifyPluginAsync = async (fastify) => {
     await client.query('UPDATE projects SET settings = $2::jsonb, updated_at = now() WHERE id = $1', [projectId, nextSettings]);
 
     return { ok: true, projectId, template };
+    },
+  );
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // INFRA-03: Dedicated CSV export endpoints
+  // ────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * GET /api/reports/export/keywords
+   * Export all keyword rankings as CSV.
+   */
+  fastify.get(
+    '/api/reports/export/keywords',
+    {
+      schema: {
+        tags: ['reports'],
+        description:
+          'Export keyword rankings as CSV.\n\n' +
+          'curl:\n' +
+          '```bash\n' +
+          'curl -L -H "Authorization: Bearer <ACCESS_TOKEN>" http://localhost:3001/api/reports/export/keywords --output keywords.csv\n' +
+          '```\n',
+        querystring: {
+          type: 'object',
+          properties: { limit: { type: 'number', default: 5000 } },
+          additionalProperties: true,
+        },
+      },
+    },
+    async (req, reply) => {
+    const client = await requireDb(req);
+    const projectId = await resolveDefaultProjectId(client);
+    const limit = Math.min(Number((req as any).query?.limit ?? 5000), 50_000);
+
+    const rows = await client.query(
+      `SELECT k.keyword, k.search_volume, k.difficulty, k.cpc,
+              kr.rank AS latest_rank, kr.checked_at AS rank_checked_at,
+              k.created_at
+       FROM keywords k
+       LEFT JOIN LATERAL (
+         SELECT rank, checked_at FROM keyword_ranks
+         WHERE keyword_id = k.id
+         ORDER BY checked_at DESC LIMIT 1
+       ) kr ON true
+       WHERE k.project_id = $1
+       ORDER BY k.created_at DESC
+       LIMIT $2`,
+      [projectId, limit],
+    );
+
+    const csv = buildCsv(
+      ['keyword', 'search_volume', 'difficulty', 'cpc', 'latest_rank', 'rank_checked_at', 'created_at'],
+      rows.rows.map((r: any) => [
+        r.keyword,
+        r.search_volume,
+        r.difficulty,
+        r.cpc,
+        r.latest_rank,
+        r.rank_checked_at,
+        r.created_at,
+      ]),
+    );
+
+    const buf = Buffer.from(csv, 'utf-8');
+    reply.header('content-type', 'text/csv; charset=utf-8');
+    reply.header('content-disposition', 'attachment; filename="keywords.csv"');
+    reply.header('content-length', String(buf.byteLength));
+    return reply.send(buf);
+    },
+  );
+
+  /**
+   * GET /api/reports/export/backlinks
+   * Export backlinks as CSV.
+   */
+  fastify.get(
+    '/api/reports/export/backlinks',
+    {
+      schema: {
+        tags: ['reports'],
+        description:
+          'Export backlinks as CSV.\n\n' +
+          'curl:\n' +
+          '```bash\n' +
+          'curl -L -H "Authorization: Bearer <ACCESS_TOKEN>" http://localhost:3001/api/reports/export/backlinks --output backlinks.csv\n' +
+          '```\n',
+        querystring: {
+          type: 'object',
+          properties: { limit: { type: 'number', default: 5000 } },
+          additionalProperties: true,
+        },
+      },
+    },
+    async (req, reply) => {
+    const client = await requireDb(req);
+    const projectId = await resolveDefaultProjectId(client);
+    const limit = Math.min(Number((req as any).query?.limit ?? 5000), 50_000);
+
+    const rows = await client.query(
+      `SELECT source_url, target_url, anchor_text, domain_rating,
+              is_follow, is_active, first_seen, last_seen
+       FROM backlinks
+       WHERE project_id = $1
+       ORDER BY first_seen DESC
+       LIMIT $2`,
+      [projectId, limit],
+    );
+
+    const csv = buildCsv(
+      ['source_url', 'target_url', 'anchor_text', 'domain_rating', 'is_follow', 'is_active', 'first_seen', 'last_seen'],
+      rows.rows.map((r: any) => [
+        r.source_url,
+        r.target_url,
+        r.anchor_text,
+        r.domain_rating,
+        r.is_follow,
+        r.is_active,
+        r.first_seen,
+        r.last_seen,
+      ]),
+    );
+
+    const buf = Buffer.from(csv, 'utf-8');
+    reply.header('content-type', 'text/csv; charset=utf-8');
+    reply.header('content-disposition', 'attachment; filename="backlinks.csv"');
+    reply.header('content-length', String(buf.byteLength));
+    return reply.send(buf);
+    },
+  );
+
+  /**
+   * GET /api/reports/export/audit
+   * Export audit issues as CSV.
+   */
+  fastify.get(
+    '/api/reports/export/audit',
+    {
+      schema: {
+        tags: ['reports'],
+        description:
+          'Export audit issues as CSV.\n\n' +
+          'curl:\n' +
+          '```bash\n' +
+          'curl -L -H "Authorization: Bearer <ACCESS_TOKEN>" http://localhost:3001/api/reports/export/audit --output audit.csv\n' +
+          '```\n',
+        querystring: {
+          type: 'object',
+          properties: { limit: { type: 'number', default: 5000 } },
+          additionalProperties: true,
+        },
+      },
+    },
+    async (req, reply) => {
+    const client = await requireDb(req);
+    const projectId = await resolveDefaultProjectId(client);
+    const limit = Math.min(Number((req as any).query?.limit ?? 5000), 50_000);
+
+    const rows = await client.query(
+      `SELECT url, issue_type, severity, description, recommendation, detected_at
+       FROM audit_issues
+       WHERE project_id = $1
+       ORDER BY
+         CASE severity WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4 END,
+         detected_at DESC
+       LIMIT $2`,
+      [projectId, limit],
+    );
+
+    const csv = buildCsv(
+      ['url', 'issue_type', 'severity', 'description', 'recommendation', 'detected_at'],
+      rows.rows.map((r: any) => [
+        r.url,
+        r.issue_type,
+        r.severity,
+        r.description,
+        r.recommendation,
+        r.detected_at,
+      ]),
+    );
+
+    const buf = Buffer.from(csv, 'utf-8');
+    reply.header('content-type', 'text/csv; charset=utf-8');
+    reply.header('content-disposition', 'attachment; filename="audit-issues.csv"');
+    reply.header('content-length', String(buf.byteLength));
+    return reply.send(buf);
     },
   );
 };

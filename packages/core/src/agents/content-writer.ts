@@ -149,7 +149,7 @@ export class ContentWriterAgent extends BaseAgent<ContentWriterInput, ContentWri
       ],
     };
 
-    return outlines[format] ?? outlines.blog;
+    return outlines[format] ?? outlines['blog']!;
   }
 
   private async generateTitle(topic: string, keywords: string[], ctx: AgentContext): Promise<string> {

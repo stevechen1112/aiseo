@@ -1,5 +1,7 @@
 import 'dotenv/config';
 
+import http from 'node:http';
+
 import {
   createDefaultToolRegistry,
   createIsolatedWorkspace,
@@ -450,10 +452,30 @@ const workers = [
 // eslint-disable-next-line no-console
 console.log('[workers] dev workers started');
 
+// ── Minimal /health HTTP server for K8s liveness / readiness probes (port 3002) ──
+const HEALTH_PORT = Number(process.env.WORKER_HEALTH_PORT ?? 3002);
+let _healthy = true;
+
+const healthServer = http.createServer((_req, res) => {
+  if (_healthy) {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'ok', uptime: process.uptime() }));
+  } else {
+    res.writeHead(503, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'stopping' }));
+  }
+});
+healthServer.listen(HEALTH_PORT, () => {
+  // eslint-disable-next-line no-console
+  console.log(`[workers] health server listening on :${HEALTH_PORT}`);
+});
+
 process.on('SIGINT', async () => {
   // eslint-disable-next-line no-console
   console.log('[workers] stopping...');
 
+  _healthy = false;
+  healthServer.close();
   await Promise.all(workers.map((w) => w.close()));
   await engine.close();
   await scheduler.close();

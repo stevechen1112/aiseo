@@ -4,7 +4,7 @@ import net from 'node:net';
 function isPrivateIpv4(ip: string) {
   const parts = ip.split('.').map((n) => Number(n));
   if (parts.length !== 4 || parts.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return true;
-  const [a, b] = parts;
+  const [a, b] = parts as [number, number, number, number];
 
   if (a === 0) return true;
   if (a === 10) return true;

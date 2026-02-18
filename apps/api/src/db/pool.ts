@@ -17,6 +17,14 @@ export const pool = new Pool({
     }
     return raw;
   })(),
+  // PERF-04: Bound the pool to avoid overwhelming PostgreSQL (default was unlimited).
+  // Align with PostgreSQL's max_connections (typically 100–200 for managed instances).
+  // Rule of thumb: (num_cores * 2) + effective_spindle_count, capped at ~20 for API workers.
+  max: 20,
+  // Release idle connections after 30 seconds to avoid holding on to DB resources.
+  idleTimeoutMillis: 30_000,
+  // Fail fast if a connection cannot be acquired within 5 seconds.
+  connectionTimeoutMillis: 5_000,
 });
 
 export async function setTenantContext(client: pg.PoolClient, tenantId: string) {

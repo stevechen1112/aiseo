@@ -2,6 +2,9 @@ export type SerpQuery = {
   keyword: string;
   locale?: string;
   domain?: string;
+  location?: string;
+  device?: string;
+  targetUrl?: string;
 };
 
 export type SerpRankResult = {

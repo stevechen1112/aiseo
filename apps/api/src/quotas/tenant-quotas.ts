@@ -59,10 +59,10 @@ export function computeTenantQuotas(plan: unknown, settings: unknown): TenantQuo
   const crawlJobsPerMonth = override ? readNumber((override as any).crawlJobsPerMonth) : undefined;
 
   return {
-    keywordsMax: keywordsMax === undefined ? base.keywordsMax : keywordsMax,
-    apiCallsPerMonth: apiCallsPerMonth === undefined ? base.apiCallsPerMonth : apiCallsPerMonth,
-    serpJobsPerMonth: serpJobsPerMonth === undefined ? base.serpJobsPerMonth : serpJobsPerMonth,
-    crawlJobsPerMonth: crawlJobsPerMonth === undefined ? base.crawlJobsPerMonth : crawlJobsPerMonth,
+    keywordsMax: keywordsMax === undefined ? base!.keywordsMax : keywordsMax,
+    apiCallsPerMonth: apiCallsPerMonth === undefined ? base!.apiCallsPerMonth : apiCallsPerMonth,
+    serpJobsPerMonth: serpJobsPerMonth === undefined ? base!.serpJobsPerMonth : serpJobsPerMonth,
+    crawlJobsPerMonth: crawlJobsPerMonth === undefined ? base!.crawlJobsPerMonth : crawlJobsPerMonth,
   };
 }
 

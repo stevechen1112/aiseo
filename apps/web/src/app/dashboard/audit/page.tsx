@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Treemap } from 'recharts';
 
 import { useAuditHealth, useAuditIssues, useCrawlMap, useCwvTrends, useResolveAuditIssue } from '@/lib/queries';
@@ -87,54 +88,12 @@ export default function AuditPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="border-b border-gray-200 dark:border-gray-700">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Severity</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Issue</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">URL</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Audited</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {issuesLoading ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-10 text-center text-sm text-gray-500">Loading…</td>
-                </tr>
-              ) : issues.length > 0 ? (
-                issues.slice(0, 100).map((i) => (
-                  <tr key={i.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                    <td className="px-6 py-4">
-                      <SeverityPill severity={i.severity} resolved={i.resolved} />
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">{i.title}</div>
-                      <div className="mt-1 text-xs text-gray-500 dark:text-gray-500">{i.category}</div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400 max-w-[360px] truncate">{i.url}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-400">{formatRelativeTime(i.auditedAt)}</td>
-                    <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => resolveIssue.mutate({ issueId: i.id, resolved: !i.resolved })}
-                        disabled={resolveIssue.isPending}
-                        className="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {i.resolved ? 'Reopen' : 'Mark resolved'}
-                      </button>
-                      {i.resolvedAt ? (
-                        <div className="mt-1 text-[11px] text-gray-500">Resolved {formatRelativeTime(i.resolvedAt)}</div>
-                      ) : null}
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={5} className="px-6 py-10 text-center text-sm text-gray-500">No issues</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+          <AuditIssuesTable
+            issues={issues}
+            issuesLoading={issuesLoading}
+            onResolve={(id, resolved) => resolveIssue.mutate({ issueId: id, resolved: !resolved })}
+            resolvePending={resolveIssue.isPending}
+          />
         </div>
       </div>
 
@@ -296,5 +255,141 @@ function CrawlTreemapCell(props: any) {
         </text>
       ) : null}
     </g>
+  );
+}
+
+// ── Virtualized Audit Issues Table ────────────────────────────────────────────
+// Uses @tanstack/react-virtual to render only visible rows, keeping FPS high
+// when there are hundreds of issues.
+type AuditIssue = {
+  id: string;
+  severity: Severity;
+  resolved: boolean;
+  title: string;
+  category: string;
+  url: string;
+  auditedAt: string;
+  resolvedAt?: string | null;
+};
+
+function AuditIssuesTable({
+  issues,
+  issuesLoading,
+  onResolve,
+  resolvePending,
+}: {
+  issues: AuditIssue[];
+  issuesLoading: boolean;
+  onResolve: (id: string, resolved: boolean) => void;
+  resolvePending: boolean;
+}) {
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  const rowVirtualizer = useVirtualizer({
+    count: issues.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 72, // px per row (approximate)
+    overscan: 8,
+  });
+
+  if (issuesLoading) {
+    return (
+      <table className="w-full">
+        <tbody>
+          <tr>
+            <td colSpan={5} className="px-6 py-10 text-center text-sm text-gray-500">Loading…</td>
+          </tr>
+        </tbody>
+      </table>
+    );
+  }
+
+  if (issues.length === 0) {
+    return (
+      <table className="w-full">
+        <tbody>
+          <tr>
+            <td colSpan={5} className="px-6 py-10 text-center text-sm text-gray-500">No issues</td>
+          </tr>
+        </tbody>
+      </table>
+    );
+  }
+
+  const virtualItems = rowVirtualizer.getVirtualItems();
+
+  return (
+    <table className="w-full table-fixed">
+      <thead className="border-b border-gray-200 dark:border-gray-700">
+        <tr>
+          <th className="w-28 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Severity</th>
+          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Issue</th>
+          <th className="w-64 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">URL</th>
+          <th className="w-32 px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Audited</th>
+          <th className="w-36 px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {/* Spacer for items above visible range */}
+        {virtualItems.length > 0 && virtualItems[0].start > 0 ? (
+          <tr style={{ height: virtualItems[0].start }}>
+            <td colSpan={5} />
+          </tr>
+        ) : null}
+
+        {/* Scrollable container wrapping the tbody */}
+        <tr>
+          <td colSpan={5} style={{ padding: 0 }}>
+            <div
+              ref={parentRef}
+              style={{ height: Math.min(issues.length * 72, 480), overflowY: 'auto' }}
+            >
+              <div style={{ height: rowVirtualizer.getTotalSize(), position: 'relative' }}>
+                {virtualItems.map((virtualRow) => {
+                  const i = issues[virtualRow.index];
+                  return (
+                    <div
+                      key={i.id}
+                      data-index={virtualRow.index}
+                      ref={rowVirtualizer.measureElement}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        transform: `translateY(${virtualRow.start}px)`,
+                      }}
+                      className="flex items-center gap-4 border-b border-gray-200 dark:border-gray-700 px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                    >
+                      <div className="w-28 shrink-0">
+                        <SeverityPill severity={i.severity} resolved={i.resolved} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white truncate">{i.title}</div>
+                        <div className="mt-1 text-xs text-gray-500 dark:text-gray-500">{i.category}</div>
+                      </div>
+                      <div className="w-64 shrink-0 text-sm text-gray-600 dark:text-gray-400 truncate">{i.url}</div>
+                      <div className="w-32 shrink-0 text-sm text-gray-600 dark:text-gray-400">{formatRelativeTime(i.auditedAt)}</div>
+                      <div className="w-36 shrink-0 text-right">
+                        <button
+                          onClick={() => onResolve(i.id, i.resolved)}
+                          disabled={resolvePending}
+                          className="rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {i.resolved ? 'Reopen' : 'Mark resolved'}
+                        </button>
+                        {i.resolvedAt ? (
+                          <div className="mt-1 text-[11px] text-gray-500">Resolved {formatRelativeTime(i.resolvedAt)}</div>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
   );
 }

@@ -284,4 +284,70 @@ export const cmsRoutes: FastifyPluginAsync = async (fastify) => {
     return { ok: true, projectId, cms: input };
     },
   );
+
+  /**
+   * POST /api/cms/test-connection
+   * Tests CMS credentials without saving them.
+   */
+  fastify.post(
+    '/api/cms/test-connection',
+    {
+      schema: {
+        tags: ['cms'],
+        description: 'Test CMS credentials — verifies authentication without saving.',
+        body: {
+          type: 'object',
+          properties: {
+            provider: { type: 'string', enum: ['wordpress', 'shopify'] },
+            wordpress: { type: 'object', additionalProperties: true },
+            shopify: { type: 'object', additionalProperties: true },
+          },
+          required: ['provider'],
+          additionalProperties: true,
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              ok: { type: 'boolean' },
+              displayName: { type: 'string' },
+              error: { type: 'string' },
+            },
+            required: ['ok'],
+            additionalProperties: true,
+          },
+        },
+      },
+    },
+    async (req) => {
+      requirePermission(req, 'cms.configure');
+      const input = cmsConfigSchema.parse(req.body ?? {});
+
+      try {
+        const { WordPressClient, ShopifyClient } = await import('@aiseo/core');
+
+        if (input.provider === 'wordpress') {
+          if (!input.wordpress) {
+            return { ok: false, error: 'WordPress config missing' };
+          }
+          const wp = new WordPressClient(input.wordpress);
+          const result = await wp.testConnection();
+          return { ok: result.ok, displayName: result.displayName };
+        }
+
+        if (input.provider === 'shopify') {
+          if (!input.shopify) {
+            return { ok: false, error: 'Shopify config missing' };
+          }
+          const shopify = new ShopifyClient(input.shopify);
+          const result = await shopify.testConnection();
+          return { ok: result.ok, displayName: result.shopName };
+        }
+
+        return { ok: false, error: 'Unsupported provider' };
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) };
+      }
+    },
+  );
 };

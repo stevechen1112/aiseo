@@ -1,3 +1,4 @@
+import './instrumentation.js'; // OTel — must be first import
 import 'dotenv/config';
 
 import { STATUS_CODES } from 'node:http';
@@ -6,12 +7,15 @@ import websocket from '@fastify/websocket';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import helmet from '@fastify/helmet';
-import type { RawData } from 'ws';
-import jwt from 'jsonwebtoken';
+import rawbody from 'fastify-raw-body';
+import type { RawData, WebSocket } from 'ws';
 
 import { env } from './config/env.js';
 import { addTenantRlsHooks } from './middleware/index.js';
 import { geminiContentWriterSpikeRoute } from './spike/index.js';
+import { pool } from './db/pool.js';
+import { startQuotaSyncJob } from './quotas/redis-quota.js';
+import { verifyAccessToken } from './utils/index.js';
 import {
   agentsRoutes,
   alertsRoutes,
@@ -40,14 +44,44 @@ import {
   workflowsRoutes,
   tenantsRoutes,
   platformTenantsRoutes,
+  billingRoutes,
 } from './routes/index.js';
 
 import { createRedisConnection, EventBus } from '@aiseo/core';
 
 const port = env.PORT;
 
+// ── Shared EventBus: single Redis subscriber, fan-out to tenant connections ──
+// Replacing per-connection bus.subscribe() (each duplicated a Redis connection).
+const _eventRedis = createRedisConnection({ url: env.REDIS_URL });
+const _sharedBus = new EventBus({ redis: _eventRedis, prefix: 'aiseo' });
+// tenantId → Set of WebSocket connections currently subscribed to that tenant.
+const _tenantSockets = new Map<string, Set<WebSocket>>();
+const _sharedSubscription = _sharedBus.subscribeAll((event) => {
+  const sockets = _tenantSockets.get(event.tenantId);
+  if (!sockets || sockets.size === 0) return;
+  const msg = JSON.stringify(event);
+  for (const ws of sockets) {
+    try {
+      ws.send(msg);
+    } catch {
+      // connection may have closed between check and send — ignore
+    }
+  }
+});
+await _sharedSubscription.start();
+
 const fastify = Fastify({
   logger: true,
+});
+
+// Enable raw body capture for routes that opt in via config.rawBody (Stripe webhooks).
+await fastify.register(rawbody, {
+  field: 'rawBody',
+  global: false,
+  encoding: 'utf8',
+  runFirst: true,
+  routes: ['/api/billing/webhook'],
 });
 
 // Basic security headers (Phase 4 - 5.9)
@@ -146,6 +180,7 @@ await fastify.register(devRoutes);
 // Phase 4
 await fastify.register(tenantsRoutes);
 await fastify.register(platformTenantsRoutes);
+await fastify.register(billingRoutes);
 
 fastify.get('/health', async () => {
   return { ok: true };
@@ -174,21 +209,20 @@ fastify.get('/ws/events', { websocket: true }, async (connection, req) => {
       return;
     }
 
-    const secret = env.JWT_SECRET ?? 'aiseo-jwt-dev-secret-change-in-production';
-    let decoded: { tenantId: string; emailVerified?: boolean };
+    let decoded: { tenantId: string; emailVerified: boolean };
     try {
-      decoded = jwt.verify(token, secret) as any;
+      decoded = verifyAccessToken(token, env.JWT_SECRET);
     } catch {
       connection.close();
       return;
     }
 
-    if (env.NODE_ENV === 'production' && !(decoded as any).emailVerified) {
+    if (env.NODE_ENV === 'production' && !decoded.emailVerified) {
       connection.close();
       return;
     }
 
-    const tenantId = String((decoded as any).tenantId ?? '');
+    const tenantId = String(decoded.tenantId ?? '');
     if (!tenantId) {
       connection.close();
       return;
@@ -196,18 +230,18 @@ fastify.get('/ws/events', { websocket: true }, async (connection, req) => {
 
     fastify.log.info({ tenantId }, 'ws/events connected');
 
-    const redis = createRedisConnection({ url: env.REDIS_URL });
-    const bus = new EventBus({ redis, prefix: 'aiseo' });
-    const subscription = bus.subscribe(tenantId, (event) => {
-      connection.send(JSON.stringify(event));
-    });
+    // Register this socket in the shared routing table.
+    if (!_tenantSockets.has(tenantId)) {
+      _tenantSockets.set(tenantId, new Set());
+    }
+    const socketSet = _tenantSockets.get(tenantId)!;
+    socketSet.add((connection as any).socket as unknown as WebSocket);
 
-    await subscription.start();
-    fastify.log.info({ tenantId }, 'ws/events subscription started');
-
-    connection.on('close', async () => {
-      await subscription.stop();
-      redis.disconnect();
+    connection.on('close', () => {
+      socketSet.delete((connection as any).socket as unknown as WebSocket);
+      if (socketSet.size === 0) {
+        _tenantSockets.delete(tenantId);
+      }
       fastify.log.info({ tenantId }, 'ws/events disconnected');
     });
   } catch (err) {
@@ -221,3 +255,18 @@ fastify.get('/ws/events', { websocket: true }, async (connection, req) => {
 });
 
 await fastify.listen({ port, host: '0.0.0.0' });
+
+// PERF-01: Start hourly quota counter sync from Redis → DB
+const stopQuotaSync = startQuotaSyncJob(() => pool.connect());
+
+fastify.addHook('onClose', async () => {
+  stopQuotaSync();
+  try {
+    if (typeof (_sharedSubscription as { stop?: () => Promise<void> }).stop === 'function') {
+      await (_sharedSubscription as { stop: () => Promise<void> }).stop();
+    }
+  } catch {
+    // ignore cleanup failures
+  }
+  _eventRedis.disconnect();
+});

@@ -5,8 +5,8 @@
 [![Fastify](https://img.shields.io/badge/Fastify-5.x-black.svg)](https://www.fastify.io/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://www.postgresql.org/)
 
-> **專案狀態**: Phase 0–4 工程交付完成 (96%)，可進行 Closed Beta / UAT。  
-> **剩餘項目**: 使用者手冊 (初稿已完成)、影片教學 (非工程阻塞項)。
+> **專案狀態**: 全部優化任務完成 (100%)，編譯驗證通過，可進行正式部署。
+> **最後更新**: 2026-02-18 — 優化 v2 交付完成（25 項功能 + 6 項 code review 修正 + 2 項收尾）。
 
 AISEO 是一個高度自動化、基於代理人框架 (Agentic Framework) 的企業級 SEO 優化平台。系統核心由 **12 個專業 AI 代理** (6 Smart Agents + 6 Auto Tasks) 組成，能自主完成關鍵字研究、排名追蹤、內容創作、技術審核及競爭對手分析。
 
@@ -76,8 +76,12 @@ AISEO 是一個高度自動化、基於代理人框架 (Agentic Framework) 的�
 | **ORM** | Drizzle ORM | latest |
 | **資料庫** | PostgreSQL + pgvector | 16 |
 | **快取 / 任務隊列** | Redis + BullMQ | 7.x |
-| **認證** | JWT (Access + Refresh Tokens) | — |
+| **認證** | JWT (Access + Refresh Tokens, Zod-validated) | — |
 | **驗證** | Zod | — |
+| **Billing** | Stripe Checkout + Webhooks | — |
+| **Observability** | OpenTelemetry SDK + Jaeger | — |
+| **Infra** | Kubernetes + Helm Chart | — |
+| **Unit Tests** | Vitest (packages/core) | — |
 | **UI** | shadcn/ui + Tailwind CSS + Lucide Icons | — |
 | **圖表** | Recharts, Cytoscape.js, FullCalendar | — |
 | **富文本編輯器** | TipTap | — |
@@ -96,15 +100,16 @@ AISEO/
 │   ├── api/                    # Fastify API Server (28 route modules)
 │   │   ├── src/
 │   │   │   ├── server.ts       # 入口
-│   │   │   ├── routes/         # 28 個路由模組 (auth, agents, keywords, ...)
+│   │   │   ├── routes/         # 28 個路由模組 (auth, agents, keywords, billing, ...)
 │   │   │   ├── middleware/     # JWT 認證 + tenant RLS
 │   │   │   ├── db/            # Drizzle schema + connection pool
-│   │   │   ├── outbox/        # Outbox Dispatcher (可靠事件投遞)
+│   │   │   ├── outbox/        # Outbox Dispatcher (可靠事件投遞 + dashboard cache invalidation)
 │   │   │   ├── backups/       # pg_dump/restore 備份邏輯
-│   │   │   ├── workers/       # BullMQ workers (backup, dev)
+│   │   │   ├── workers/       # BullMQ workers (backup, dev) + /health on :3002
 │   │   │   ├── scripts/       # 22+ 測試/驗證腳本
-│   │   │   └── quotas/        # 租戶配額管理
-│   │   └── drizzle/           # 22 個 DB Migration (0000–0021)
+│   │   │   ├── quotas/        # 租戶配額管理 (Redis Lua atomic + hourly DB sync)
+│   │   │   └── utils/         # AppError, JWT wrapper, requireDb helpers
+│   │   └── drizzle/           # 25 個 DB Migration (0000–0024)
 │   │
 │   └── web/                    # Next.js 15 Dashboard
 │       ├── src/app/            # App Router pages
@@ -484,6 +489,7 @@ Middleware 在每個 HTTP request 自動 `SET app.current_tenant_id`（從 JWT �
 | **使用者手冊 (New)** | `docs/user-guide.md` | **功能操作、管理員指南、FAQ** |
 | 主計畫 | `plan-c-enterprise-seo-platform.md` | 完整架構設計、API 規格、Schema、風險矩陣 |
 | 任務計畫 | `plan-c-task-plan.md` | Phase 0-4 任務追蹤 (138 項，96% 完成) |
+| 優化任務 | `docs/optimization-task-plan.md` | 25 項優化任務 (全部完成，2026-02-18) |
 | 部署指南 | `docs/deploy.md` | Docker Compose 生產部署步驟 |
 | 維運交接 | `docs/handoff.md` | 服務清單、env、備份、排障 |
 | 發布 Runbook | `docs/release-runbook.md` | v1.0 發布前/中/後檢查清單 |
@@ -494,6 +500,43 @@ Middleware 在每個 HTTP request 自動 `SET app.current_tenant_id`（從 JWT �
 | 系統需求 | `docs/system-requirements-complete.md` | 完整系統需求規格 |
 | API 測試腳本 | `docs/http-full-product-test-script.md` | HTTP 全功能測試腳本範例 |
 | 安全掃描 | `scripts/security-scan.ps1` | OWASP ZAP + npm audit |
+
+---
+
+## 🎯 優化 v2 — 2026-02-18 交付摘要
+
+本次優化涵蓋 25 項計畫任務與 8 項 code review 修復，所有變更均已通過 `pnpm -r build` 全端編譯驗證。
+
+### 主要新增項目
+
+| 分類 | 功能 | 說明 |
+|---|---|---|
+| **SEC** | Zod-validated JWT wrappers | `utils/jwt.ts` 型別安全封裝，統一所有 auth 路由 |
+| **SEC** | Singleton Redis/Queue | `server.ts` 模組層級共享，消除每請求建立連線 |
+| **SEC** | Shared WebSocket fan-out | `subscribeAll()` + tenant Map，單一 Redis 訂閱分發 |
+| **PERF** | Redis Lua atomic quota | `redisIncrQuota()` Lua 腳本，配額讀寫原子化 |
+| **PERF** | Dashboard 60s Redis cache | `cache:dashboard:metrics:{tenant}:{project}` TTL 快取 |
+| **PERF** | Cursor-based pagination | 游標分頁取代 OFFSET，N+1 安全 |
+| **BIZ** | Stripe Billing | Checkout / Portal / Webhook，方案依 Price ID 正確對應 |
+| **BIZ** | OnboardingWizard | 4-step 引導精靈，`PATCH /api/auth/me` 記錄完成狀態 |
+| **BIZ** | Quota progress bars | 80%/95% 自動告警，`GET /api/tenants/usage` 百分比回傳 |
+| **INFRA** | OpenTelemetry + Jaeger | `instrumentation.ts` 分散式追蹤 |
+| **INFRA** | Kubernetes + Helm | `k8s/` Deployments、HPA、Ingress、Helm chart |
+| **CODE** | Vitest agent tests | `packages/core` 12+ 單元測試 |
+| **CODE** | `noUncheckedIndexedAccess` | tsconfig.base.json 強化型別安全 |
+
+### Bug Fixes (Code Review)
+
+| 嚴重度 | 檔案 | 問題 |
+|---|---|---|
+| 🔴 | `quotas/usage.ts` | `reserveCrawlJobsOrThrow` / `getKeywordCapacity` merge 污染導致函式損毀 |
+| 🟠 | `server.ts` + `package.json` | `fastify-raw-body` 未安裝，Stripe webhook HMAC 驗證靜默失敗 |
+| 🟠 | `routes/billing.ts` | checkout 完成後方案寫死為 `'pro'`，現從 subscription Price ID 正確解析 |
+| 🟡 | `outbox/dispatcher.ts` | `invalidateDashboardCache` 從未被呼叫，dashboard 永遠顯示舊數據 |
+| 🟡 | `server.ts` | WebSocket JWT 驗證使用 `as any` 繞過型別安全 |
+| 🟢 | `server.ts` | `stopQuotaSync` / Redis 未在關閉時執行清理 |
+| 🔵 | `workers/dev-workers.ts` | 新增 `/health` HTTP server on :3002，修復 K8s liveness probe |
+| 🔵 | `outbox/dispatcher.ts` | cache invalidation 擴充至 `serp.rank.anomaly` + `report.ready` |
 
 ---
 

@@ -1,5 +1,23 @@
 import type { ToolContext, ToolDefinition } from '../registry.js';
 import { assertUrlHostAllowed, getEffectiveNetworkAllowlist } from '../registry.js';
+import { withRedisCache, cacheKey } from '../../cache/redis-cache.js';
+import { createRedisConnection } from '../../orchestrator/redis.js';
+
+// ── Module-level lazy Redis client (optional — caching is best-effort) ───────
+// Created once on first use; undefined when REDIS_URL is not set.
+let _semrushRedis: import('ioredis').Redis | null | undefined = undefined; // undefined = not yet initialised
+function getSemrushRedis(): import('ioredis').Redis | null {
+  if (_semrushRedis !== undefined) return _semrushRedis;
+  const url = process.env.REDIS_URL;
+  if (!url) {
+    _semrushRedis = null;
+    return null;
+  }
+  _semrushRedis = createRedisConnection({ url });
+  return _semrushRedis;
+}
+
+const SEMRUSH_CACHE_TTL_SECS = 24 * 60 * 60; // 24 hours — keyword metrics are stable
 
 // ── Domain Analytics types ────────────────────────────────────────────
 export type SemrushDomainOverviewInput = {
@@ -77,15 +95,19 @@ function parseSemrushCsv(text: string): Array<Record<string, string>> {
 
   if (lines.length < 2) return [];
 
-  const headers = lines[0].split(';').map((h) => h.trim());
+  const headers = lines[0]!.split(';').map((h) => h.trim());
   const rows: Array<Record<string, string>> = [];
 
   for (let i = 1; i < lines.length; i++) {
-    const fields = lines[i].split(';');
+    const fields = lines[i]!.split(';');
     if (fields.length < 2) continue;
     const row: Record<string, string> = {};
     for (let j = 0; j < Math.min(headers.length, fields.length); j++) {
-      row[headers[j]] = fields[j].trim();
+      const hKey = headers[j];
+      const fVal = fields[j];
+      if (hKey !== undefined && fVal !== undefined) {
+        row[hKey] = fVal.trim();
+      }
     }
     rows.push(row);
   }
@@ -209,49 +231,49 @@ export const semrushKeywordMetricsTool: ToolDefinition<SemrushKeywordMetricsInpu
       const text = await response.text();
       const rows = parseSemrushCsv(text);
       if (rows.length === 0) return undefined;
-      return pickDifficultyFromRow(rows[0]);
+      return pickDifficultyFromRow(rows[0]!);
     }
 
     // SEMrush API processes keywords one at a time
     for (const keyword of keywords) {
       try {
-        const row = await fetchPhraseThis(keyword);
-        if (!row) continue;
+        const redis = getSemrushRedis();
+        const kwCacheKey = cacheKey('aiseo:semrush:kw', { keyword, database });
 
-        const resolvedKeyword =
-          pickString(row, ['Keyword', 'Ph', 'Phrase']) ??
-          keyword;
+        const metric = await withRedisCache<SemrushKeywordMetric | null>(
+          redis!,
+          kwCacheKey,
+          redis ? SEMRUSH_CACHE_TTL_SECS : 0,
+          async () => {
+            const row = await fetchPhraseThis(keyword);
+            if (!row) return null;
 
-        const searchVolume = pickNumber(row, ['Search Volume', 'Nq']) ?? 0;
-        const cpc = pickNumber(row, ['CPC', 'Cp']) ?? 0;
-        const competition = pickNumber(row, ['Competition', 'Co']) ?? 0;
-        const trendData = pickString(row, ['Trends', 'Td']) ?? '';
-        const trend = trendData
-          .split(',')
-          .map((v) => Number(v) || 0)
-          .slice(0, 12);
+            const resolvedKeyword = pickString(row, ['Keyword', 'Ph', 'Phrase']) ?? keyword;
+            const searchVolume = pickNumber(row, ['Search Volume', 'Nq']) ?? 0;
+            const cpc = pickNumber(row, ['CPC', 'Cp']) ?? 0;
+            const competition = pickNumber(row, ['Competition', 'Co']) ?? 0;
+            const trendData = pickString(row, ['Trends', 'Td']) ?? '';
+            const trend = trendData
+              .split(',')
+              .map((v) => Number(v) || 0)
+              .slice(0, 12);
 
-        // Try to fetch real KD (KDI) from SEMrush. If unavailable, fall back to estimation.
-        let keywordDifficulty = await fetchPhraseKdi(keyword);
-        // KD=0 is usually "missing" for most commercial datasets; fall back to estimate.
-        if (keywordDifficulty === undefined || (keywordDifficulty === 0 && searchVolume > 0)) {
-          keywordDifficulty = Math.min(
-            100,
-            Math.round(competition * 70 + (searchVolume > 10000 ? 30 : searchVolume / 333)),
-          );
-        }
+            let keywordDifficulty = await fetchPhraseKdi(keyword);
+            if (keywordDifficulty === undefined || (keywordDifficulty === 0 && searchVolume > 0)) {
+              keywordDifficulty = Math.min(
+                100,
+                Math.round(competition * 70 + (searchVolume > 10000 ? 30 : searchVolume / 333)),
+              );
+            }
 
-        metrics.push({
-          keyword: resolvedKeyword,
-          searchVolume,
-          keywordDifficulty,
-          cpc,
-          competition,
-          trend,
-        });
+            // Rate limiting: SEMrush allows ~10 requests/sec; we do 2 calls/keyword
+            await new Promise((resolve) => setTimeout(resolve, 120));
 
-        // Rate limiting: SEMrush allows ~10 requests/sec; we do 2 calls/keyword
-        await new Promise((resolve) => setTimeout(resolve, 120));
+            return { keyword: resolvedKeyword, searchVolume, keywordDifficulty, cpc, competition, trend };
+          },
+        );
+
+        if (metric) metrics.push(metric);
       } catch (error) {
         // Continue with next keyword on error
       }
@@ -290,37 +312,42 @@ export const semrushKeywordIdeasTool: ToolDefinition<SemrushKeywordIdeasInput, S
     const limit = Math.min(100, Math.max(1, input.limit ?? 20));
     const kind = input.kind;
 
-    const url = 'https://api.semrush.com/';
-    const urlObj = new URL(url);
-    const effectiveAllowlist = getEffectiveNetworkAllowlist(semrushKeywordIdeasTool.permissions, ctx);
-    assertUrlHostAllowed(urlObj, effectiveAllowlist);
+    const redis = getSemrushRedis();
+    const ideasKey = cacheKey('aiseo:semrush:ideas', { keyword, database, kind, limit });
 
-    const type = kind === 'questions' ? 'phrase_questions' : 'phrase_related';
+    return withRedisCache<SemrushKeywordIdeasOutput>(redis!, ideasKey, redis ? SEMRUSH_CACHE_TTL_SECS : 0, async () => {
+      const url = 'https://api.semrush.com/';
+      const urlObj = new URL(url);
+      const effectiveAllowlist = getEffectiveNetworkAllowlist(semrushKeywordIdeasTool.permissions, ctx);
+      assertUrlHostAllowed(urlObj, effectiveAllowlist);
 
-    const params = new URLSearchParams({
-      type,
-      key: apiKey,
-      phrase: keyword,
-      database,
-      export_columns: 'Ph',
-      display_limit: String(limit),
+      const type = kind === 'questions' ? 'phrase_questions' : 'phrase_related';
+
+      const params = new URLSearchParams({
+        type,
+        key: apiKey,
+        phrase: keyword,
+        database,
+        export_columns: 'Ph',
+        display_limit: String(limit),
+      });
+
+      const res = await fetch(`${url}?${params.toString()}`);
+      if (!res.ok) {
+        const t = await res.text().catch(() => '');
+        throw new Error(`SEMrush keyword ideas error: ${res.status} ${res.statusText}${t ? ` - ${t.substring(0, 200)}` : ''}`);
+      }
+
+      const text = await res.text();
+      const rows = parseSemrushCsv(text);
+      const keywords = rows
+        .map((r) => pickString(r, ['Keyword', 'Ph', 'Phrase']))
+        .filter((k): k is string => Boolean(k))
+        .map((k) => k.trim())
+        .filter(Boolean);
+
+      return { keywords };
     });
-
-    const res = await fetch(`${url}?${params.toString()}`);
-    if (!res.ok) {
-      const t = await res.text().catch(() => '');
-      throw new Error(`SEMrush keyword ideas error: ${res.status} ${res.statusText}${t ? ` - ${t.substring(0, 200)}` : ''}`);
-    }
-
-    const text = await res.text();
-    const rows = parseSemrushCsv(text);
-    const keywords = rows
-      .map((r) => pickString(r, ['Keyword', 'Ph', 'Phrase']))
-      .filter((k): k is string => Boolean(k))
-      .map((k) => k.trim())
-      .filter(Boolean);
-
-    return { keywords };
   },
 };
 
@@ -344,37 +371,42 @@ export const semrushDomainOverviewTool: ToolDefinition<SemrushDomainOverviewInpu
 
     const database = input.database ?? process.env.SEMRUSH_DATABASE ?? 'tw';
 
-    const urlObj = new URL('https://api.semrush.com/');
-    const effectiveAllowlist = getEffectiveNetworkAllowlist(semrushDomainOverviewTool.permissions, ctx);
-    assertUrlHostAllowed(urlObj, effectiveAllowlist);
+    const redis = getSemrushRedis();
+    const domainKey = cacheKey('aiseo:semrush:domain_overview', { domain: input.domain, database });
 
-    const params = new URLSearchParams({
-      type: 'domain_ranks',
-      key: apiKey,
-      domain: input.domain,
-      database,
-      export_columns: 'Dn,Or,Ot,Oc,Ad,At,Ac',
+    return withRedisCache<SemrushDomainOverviewOutput>(redis!, domainKey, redis ? SEMRUSH_CACHE_TTL_SECS : 0, async () => {
+      const urlObj = new URL('https://api.semrush.com/');
+      const effectiveAllowlist = getEffectiveNetworkAllowlist(semrushDomainOverviewTool.permissions, ctx);
+      assertUrlHostAllowed(urlObj, effectiveAllowlist);
+
+      const params = new URLSearchParams({
+        type: 'domain_ranks',
+        key: apiKey,
+        domain: input.domain,
+        database,
+        export_columns: 'Dn,Or,Ot,Oc,Ad,At,Ac',
+      });
+
+      const res = await fetch(`${urlObj.href}?${params.toString()}`);
+      if (!res.ok) {
+        const t = await res.text().catch(() => '');
+        throw new Error(`SEMrush domain_ranks error: ${res.status} ${t.substring(0, 200)}`);
+      }
+
+      const text = await res.text();
+      const rows = parseSemrushCsv(text);
+      const row = rows[0] ?? {};
+
+      return {
+        domain: input.domain,
+        organicKeywords: pickNumber(row, ['Or', 'Organic Keywords']) ?? 0,
+        organicTraffic: pickNumber(row, ['Ot', 'Organic Traffic']) ?? 0,
+        organicCost: pickNumber(row, ['Oc', 'Organic Cost']) ?? 0,
+        paidKeywords: pickNumber(row, ['Ad', 'Adwords Keywords']) ?? 0,
+        paidTraffic: pickNumber(row, ['At', 'Adwords Traffic']) ?? 0,
+        paidCost: pickNumber(row, ['Ac', 'Adwords Cost']) ?? 0,
+      };
     });
-
-    const res = await fetch(`${urlObj.href}?${params.toString()}`);
-    if (!res.ok) {
-      const t = await res.text().catch(() => '');
-      throw new Error(`SEMrush domain_ranks error: ${res.status} ${t.substring(0, 200)}`);
-    }
-
-    const text = await res.text();
-    const rows = parseSemrushCsv(text);
-    const row = rows[0] ?? {};
-
-    return {
-      domain: input.domain,
-      organicKeywords: pickNumber(row, ['Or', 'Organic Keywords']) ?? 0,
-      organicTraffic: pickNumber(row, ['Ot', 'Organic Traffic']) ?? 0,
-      organicCost: pickNumber(row, ['Oc', 'Organic Cost']) ?? 0,
-      paidKeywords: pickNumber(row, ['Ad', 'Adwords Keywords']) ?? 0,
-      paidTraffic: pickNumber(row, ['At', 'Adwords Traffic']) ?? 0,
-      paidCost: pickNumber(row, ['Ac', 'Adwords Cost']) ?? 0,
-    };
   },
 };
 
@@ -397,40 +429,45 @@ export const semrushDomainOrganicTool: ToolDefinition<SemrushDomainOrganicInput,
     const database = input.database ?? process.env.SEMRUSH_DATABASE ?? 'tw';
     const limit = Math.min(100, Math.max(1, input.limit ?? 20));
 
-    const urlObj = new URL('https://api.semrush.com/');
-    const effectiveAllowlist = getEffectiveNetworkAllowlist(semrushDomainOrganicTool.permissions, ctx);
-    assertUrlHostAllowed(urlObj, effectiveAllowlist);
+    const redis = getSemrushRedis();
+    const organicKey = cacheKey('aiseo:semrush:domain_organic', { domain: input.domain, database, limit });
 
-    const params = new URLSearchParams({
-      type: 'domain_organic',
-      key: apiKey,
-      domain: input.domain,
-      database,
-      export_columns: 'Ph,Po,Pp,Nq,Cp,Ur,Tr,Tc',
-      display_limit: String(limit),
-      display_sort: 'tr_desc',
+    return withRedisCache<SemrushDomainOrganicOutput>(redis!, organicKey, redis ? SEMRUSH_CACHE_TTL_SECS : 0, async () => {
+      const urlObj = new URL('https://api.semrush.com/');
+      const effectiveAllowlist = getEffectiveNetworkAllowlist(semrushDomainOrganicTool.permissions, ctx);
+      assertUrlHostAllowed(urlObj, effectiveAllowlist);
+
+      const params = new URLSearchParams({
+        type: 'domain_organic',
+        key: apiKey,
+        domain: input.domain,
+        database,
+        export_columns: 'Ph,Po,Pp,Nq,Cp,Ur,Tr,Tc',
+        display_limit: String(limit),
+        display_sort: 'tr_desc',
+      });
+
+      const res = await fetch(`${urlObj.href}?${params.toString()}`);
+      if (!res.ok) {
+        const t = await res.text().catch(() => '');
+        throw new Error(`SEMrush domain_organic error: ${res.status} ${t.substring(0, 200)}`);
+      }
+
+      const text = await res.text();
+      const rows = parseSemrushCsv(text);
+
+      const keywords: SemrushDomainOrganicKeyword[] = rows.map((row) => ({
+        keyword: pickString(row, ['Ph', 'Keyword', 'Phrase']) ?? '',
+        position: pickNumber(row, ['Po', 'Position']) ?? 0,
+        previousPosition: pickNumber(row, ['Pp', 'Previous Position']) ?? 0,
+        searchVolume: pickNumber(row, ['Nq', 'Search Volume']) ?? 0,
+        cpc: pickNumber(row, ['Cp', 'CPC']) ?? 0,
+        url: pickString(row, ['Ur', 'Url']) ?? '',
+        traffic: pickNumber(row, ['Tr', 'Traffic']) ?? 0,
+        trafficPercent: pickNumber(row, ['Tc', 'Traffic Cost']) ?? 0,
+      }));
+
+      return { domain: input.domain, keywords };
     });
-
-    const res = await fetch(`${urlObj.href}?${params.toString()}`);
-    if (!res.ok) {
-      const t = await res.text().catch(() => '');
-      throw new Error(`SEMrush domain_organic error: ${res.status} ${t.substring(0, 200)}`);
-    }
-
-    const text = await res.text();
-    const rows = parseSemrushCsv(text);
-
-    const keywords: SemrushDomainOrganicKeyword[] = rows.map((row) => ({
-      keyword: pickString(row, ['Ph', 'Keyword', 'Phrase']) ?? '',
-      position: pickNumber(row, ['Po', 'Position']) ?? 0,
-      previousPosition: pickNumber(row, ['Pp', 'Previous Position']) ?? 0,
-      searchVolume: pickNumber(row, ['Nq', 'Search Volume']) ?? 0,
-      cpc: pickNumber(row, ['Cp', 'CPC']) ?? 0,
-      url: pickString(row, ['Ur', 'Url']) ?? '',
-      traffic: pickNumber(row, ['Tr', 'Traffic']) ?? 0,
-      trafficPercent: pickNumber(row, ['Tc', 'Traffic Cost']) ?? 0,
-    }));
-
-    return { domain: input.domain, keywords };
   },
 };

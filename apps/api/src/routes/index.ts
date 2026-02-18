@@ -6,7 +6,7 @@ export { serpRoutes } from './serp.js';
 export { serpScheduleRoutes } from './serp-schedule.js';
 export { devRoutes } from './dev.js';
 
-export { dashboardRoutes } from './dashboard.js';
+export { dashboardRoutes, invalidateDashboardCache } from './dashboard.js';
 export { keywordsRoutes } from './keywords.js';
 export { contentRoutes } from './content.js';
 export { alertsRoutes } from './alerts.js';
@@ -26,6 +26,8 @@ export { reviewRoutes } from './review.js';
 export { cmsRoutes } from './cms.js';
 export { reportScheduleRoutes } from './report-schedules.js';
 export { webhooksRoutes } from './webhooks.js';
+
+export { billingRoutes } from './billing.js';
 
 // Phase 4
 export { tenantsRoutes } from './tenants.js';

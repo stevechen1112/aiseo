@@ -144,7 +144,7 @@ Identify main topics/themes:
       let jsonText = content.trim();
       const jsonMatch = jsonText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
       if (jsonMatch) {
-        jsonText = jsonMatch[1];
+        jsonText = jsonMatch[1] ?? jsonText;
       }
 
       const parsed = JSON.parse(jsonText) as Partial<LlmNlpAnalyzeOutput>;

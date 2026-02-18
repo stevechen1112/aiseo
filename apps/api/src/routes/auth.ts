@@ -1,45 +1,43 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
-import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'node:crypto';
 
 import { env } from '../config/env.js';
 import { createEmailService } from '@aiseo/core';
 import { setAuthContext } from '../db/pool.js';
+import {
+  signAccessToken as jwtSignAccess,
+  signRefreshToken as jwtSignRefresh,
+  verifyAccessToken as jwtVerifyAccess,
+  verifyRefreshToken as jwtVerifyRefresh,
+  requireDb,
+  AppError,
+} from '../utils/index.js';
 
 // ── Env / secrets ──────────────────────────────────────────────────
-const JWT_SECRET = env.JWT_SECRET ?? 'aiseo-jwt-dev-secret-change-in-production';
-const JWT_REFRESH_SECRET = env.JWT_REFRESH_SECRET ?? 'aiseo-refresh-dev-secret-change-in-production';
+const JWT_SECRET = env.JWT_SECRET;
+const JWT_REFRESH_SECRET = env.JWT_REFRESH_SECRET;
 const ACCESS_TOKEN_EXPIRY = '15m';
 const REFRESH_TOKEN_EXPIRY = '7d';
 const SALT_ROUNDS = 12;
 const REQUIRE_EMAIL_VERIFICATION = env.NODE_ENV === 'production';
 
 // ── Helpers ────────────────────────────────────────────────────────
-async function requireDb(req: { dbClient?: import('pg').PoolClient }) {
-  if (!req.dbClient) {
-    const error = new Error('DB not available');
-    (error as Error & { statusCode: number }).statusCode = 500;
-    throw error;
-  }
-  return req.dbClient;
+function signAccessToken(payload: { userId: string; email: string; tenantId: string; role: 'admin' | 'manager' | 'analyst'; emailVerified: boolean }) {
+  return jwtSignAccess(payload, JWT_SECRET, ACCESS_TOKEN_EXPIRY);
 }
 
-function signAccessToken(payload: { userId: string; email: string; tenantId: string; role: string; emailVerified: boolean }) {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: ACCESS_TOKEN_EXPIRY });
-}
-
-function signRefreshToken(payload: { userId: string }) {
-  return jwt.sign(payload, JWT_REFRESH_SECRET, { expiresIn: REFRESH_TOKEN_EXPIRY });
+function signRefreshToken(payload: { userId: string; tenantId: string }) {
+  return jwtSignRefresh(payload, JWT_REFRESH_SECRET, REFRESH_TOKEN_EXPIRY);
 }
 
 function verifyAccessToken(token: string) {
-  return jwt.verify(token, JWT_SECRET) as { userId: string; email: string; tenantId: string; role: string; emailVerified?: boolean };
+  return jwtVerifyAccess(token, JWT_SECRET);
 }
 
 function verifyRefreshToken(token: string) {
-  return jwt.verify(token, JWT_REFRESH_SECRET) as { userId: string };
+  return jwtVerifyRefresh(token, JWT_REFRESH_SECRET);
 }
 
 // ── Validation schemas ─────────────────────────────────────────────
@@ -200,7 +198,7 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       role: 'admin',
       emailVerified: false,
     });
-    const refreshToken = signRefreshToken({ userId: user.id });
+    const refreshToken = signRefreshToken({ userId: user.id, tenantId });
 
     // Send email verification (best-effort).
     try {
@@ -514,10 +512,10 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       userId: user.id,
       email: user.email,
       tenantId: membership.tenant_id,
-      role: membership.role,
+      role: membership.role as 'admin' | 'manager' | 'analyst',
       emailVerified: !!user.email_verified_at,
     });
-    const refreshToken = signRefreshToken({ userId: user.id });
+    const refreshToken = signRefreshToken({ userId: user.id, tenantId: membership.tenant_id });
 
     return {
       ok: true,
@@ -630,10 +628,10 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
       userId: user.id,
       email: user.email,
       tenantId: membership.tenant_id,
-      role: membership.role,
+      role: membership.role as 'admin' | 'manager' | 'analyst',
       emailVerified: !!user.email_verified_at,
     });
-    const newRefreshToken = signRefreshToken({ userId: user.id });
+    const newRefreshToken = signRefreshToken({ userId: user.id, tenantId: membership.tenant_id });
 
     return {
       ok: true,
@@ -735,17 +733,20 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
 
     const client = await requireDb(req);
     const userRow = await client.query(
-      'SELECT id, email, name, avatar_url, created_at, email_verified_at FROM users WHERE id = $1 LIMIT 1',
+      'SELECT id, email, name, avatar_url, created_at, email_verified_at, settings FROM users WHERE id = $1 LIMIT 1',
       [decoded.userId],
     );
 
     if ((userRow.rowCount ?? 0) === 0) {
-      const error = new Error('User not found');
-      (error as Error & { statusCode: number }).statusCode = 401;
-      throw error;
+      throw new AppError('User not found', 401);
     }
 
-    const user = userRow.rows[0] as { id: string; email: string; name: string; avatar_url: string | null; created_at: Date; email_verified_at: Date | null };
+    const user = userRow.rows[0] as {
+      id: string; email: string; name: string;
+      avatar_url: string | null; created_at: Date;
+      email_verified_at: Date | null;
+      settings: Record<string, unknown>;
+    };
 
     return {
       ok: true,
@@ -759,8 +760,76 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
         emailVerified: !!user.email_verified_at,
         emailVerifiedAt: user.email_verified_at ? user.email_verified_at.toISOString() : null,
         createdAt: user.created_at.toISOString(),
+        settings: user.settings ?? {},
       },
     };
+    },
+  );
+
+  /**
+   * PATCH /api/auth/me
+   * Updates the current user's settings (whitelist-only).
+   * Allowed keys: onboardingSeenAt, uiPreferences
+   */
+  fastify.patch(
+    '/api/auth/me',
+    {
+      schema: {
+        tags: ['auth'],
+        security: [{ bearerAuth: [] }],
+        body: {
+          type: 'object',
+          properties: {
+            settings: {
+              type: 'object',
+              properties: {
+                onboardingSeenAt: { type: ['string', 'null'] },
+                uiPreferences: { type: 'object', additionalProperties: true },
+              },
+              additionalProperties: false,
+            },
+          },
+          required: ['settings'],
+          additionalProperties: false,
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              ok: { type: 'boolean' },
+              settings: { type: 'object', additionalProperties: true },
+            },
+            required: ['ok', 'settings'],
+          },
+        },
+      },
+    },
+    async (req) => {
+      const authHeader = req.headers.authorization;
+      if (!authHeader?.startsWith('Bearer ')) throw new AppError('Missing authorization header', 401);
+
+      const decoded = verifyAccessToken(authHeader.slice(7));
+
+      // Whitelist: only allow onboardingSeenAt and uiPreferences
+      const input = (req.body as { settings: Record<string, unknown> }).settings ?? {};
+      const ALLOWED_KEYS = new Set(['onboardingSeenAt', 'uiPreferences']);
+      const safeSettings: Record<string, unknown> = {};
+      for (const key of ALLOWED_KEYS) {
+        if (key in input) safeSettings[key] = input[key];
+      }
+
+      const client = await requireDb(req);
+
+      // Merge into existing settings using jsonb_strip_nulls to handle nulls cleanly
+      const updated = await client.query(
+        `UPDATE users
+         SET settings = settings || $2::jsonb, updated_at = now()
+         WHERE id = $1
+         RETURNING settings`,
+        [decoded.userId, JSON.stringify(safeSettings)],
+      );
+
+      return { ok: true, settings: updated.rows[0]?.settings ?? {} };
     },
   );
 };

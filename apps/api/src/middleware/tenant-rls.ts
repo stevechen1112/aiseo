@@ -1,9 +1,9 @@
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify';
-import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
 import { pool, setAuthContext } from '../db/pool.js';
 import { computeTenantQuotas } from '../quotas/tenant-quotas.js';
 import { incrementApiCallsOrThrow } from '../quotas/usage.js';
+import { verifyAccessToken, AppError } from '../utils/index.js';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -42,37 +42,19 @@ export function addTenantRlsHooks(fastify: FastifyInstance) {
     const requireAuth = () => {
       const authHeader = req.headers.authorization;
       if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        const error = new Error('Missing authorization header');
-        (error as Error & { statusCode: number }).statusCode = 401;
-        throw error;
+        throw new AppError('Missing authorization header', 401);
       }
 
-      const secret = env.JWT_SECRET ?? 'aiseo-jwt-dev-secret-change-in-production';
-      let decoded: { userId: string; email: string; tenantId: string; role: string };
-      try {
-        decoded = jwt.verify(authHeader.slice(7), secret) as any;
-      } catch {
-        const error = new Error('Invalid or expired token');
-        (error as Error & { statusCode: number }).statusCode = 401;
-        throw error;
-      }
-
-      const isMembershipRole = (value: unknown): value is 'admin' | 'manager' | 'analyst' =>
-        value === 'admin' || value === 'manager' || value === 'analyst';
-
-      const roleRaw: unknown = decoded.role;
-      if (!isMembershipRole(roleRaw)) {
-        const error = new Error('Invalid role');
-        (error as Error & { statusCode: number }).statusCode = 401;
-        throw error;
-      }
+      const secret = env.JWT_SECRET;
+      // verifyAccessToken throws AppError(401) on invalid token or bad payload schema
+      const decoded = verifyAccessToken(authHeader.slice(7), secret);
 
       return {
-        userId: String(decoded.userId),
-        email: String(decoded.email),
-        tenantId: String(decoded.tenantId),
-        role: roleRaw,
-        emailVerified: Boolean((decoded as any).emailVerified ?? false),
+        userId: decoded.userId,
+        email: decoded.email,
+        tenantId: decoded.tenantId,
+        role: decoded.role,
+        emailVerified: decoded.emailVerified,
       };
     };
 

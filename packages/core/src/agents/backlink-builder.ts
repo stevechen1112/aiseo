@@ -352,7 +352,7 @@ export class BacklinkBuilderAgent extends BaseAgent<BacklinkBuilderInput, Backli
     context: AgentContext
   ): Promise<BacklinkOpportunity[]> {
     // MVP: Mock data (real implementation would use Ahrefs Content Explorer or Google Search)
-    const brandName = ownDomain.split('.')[0];
+    const brandName = ownDomain.split('.')[0] ?? ownDomain;
     const mockOpportunities: BacklinkOpportunity[] = [
       {
         opportunityId: `um_${Date.now()}_1`,

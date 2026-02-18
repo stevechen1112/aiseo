@@ -1,6 +1,17 @@
 import type { FastifyPluginAsync } from 'fastify';
 
-import { getJsonCache, setJsonCache } from '../redis.js';
+import { getJsonCache, setJsonCache, getRedis } from '../redis.js';
+import { AppError, requireDb, resolveDefaultProjectId } from '../utils/index.js';
+
+// PERF-02: invalidate dashboard cache for a tenant when a job completes.
+export async function invalidateDashboardCache(tenantId: string, projectId: string): Promise<void> {
+  try {
+    const redis = getRedis() as unknown as { del(key: string): Promise<unknown> };
+    await redis.del(`cache:dashboard:metrics:${tenantId}:${projectId}`);
+  } catch {
+    // best-effort
+  }
+}
 
 function percentChange(current: number, previous: number): { change: number; trend: 'up' | 'down' } {
   const safePrev = previous === 0 ? 1 : previous;
@@ -10,25 +21,6 @@ function percentChange(current: number, previous: number): { change: number; tre
     change: pct,
     trend: delta >= 0 ? 'up' : 'down',
   };
-}
-
-async function requireDb(req: { dbClient?: import('pg').PoolClient }) {
-  if (!req.dbClient) {
-    const error = new Error('DB not available');
-    (error as Error & { statusCode: number }).statusCode = 500;
-    throw error;
-  }
-  return req.dbClient;
-}
-
-async function resolveDefaultProjectId(client: import('pg').PoolClient): Promise<string> {
-  const row = await client.query('SELECT id FROM projects ORDER BY updated_at DESC, created_at DESC LIMIT 1');
-  if (row.rowCount === 0) {
-    const error = new Error('No project found for tenant');
-    (error as Error & { statusCode: number }).statusCode = 404;
-    throw error;
-  }
-  return String(row.rows[0].id);
 }
 
 export const dashboardRoutes: FastifyPluginAsync = async (fastify) => {
@@ -78,18 +70,23 @@ export const dashboardRoutes: FastifyPluginAsync = async (fastify) => {
         },
       },
     },
-    async (req) => {
+    async (req, reply) => {
     const client = await requireDb(req);
+    const tenantId = (req as any).tenantId as string | undefined;
     const projectId = await resolveDefaultProjectId(client);
 
-    const cacheKey = `dashboard:metrics:${projectId}`;
+    // PERF-02: tenant-scoped cache key, 60s TTL, Cache-Control header
+    const cacheKey = `cache:dashboard:metrics:${tenantId ?? 'anon'}:${projectId}`;
     const cached = await getJsonCache<{
       organicTraffic: { value: number; change: number; trend: 'up' | 'down' };
       topRankings: { value: number; change: number; trend: 'up' | 'down' };
       trackedKeywords: { value: number; change: number; trend: 'up' | 'down' };
       contentPublished: { value: number; change: number; trend: 'up' | 'down' };
     }>(cacheKey);
-    if (cached) return cached;
+    if (cached) {
+      void reply.header('Cache-Control', 'private, max-age=60');
+      return cached;
+    }
 
     const traffic = await client.query(
       `SELECT
@@ -183,7 +180,8 @@ export const dashboardRoutes: FastifyPluginAsync = async (fastify) => {
       },
     };
 
-    await setJsonCache(cacheKey, response, 15);
+    await setJsonCache(cacheKey, response, 60); // PERF-02: 60s TTL
+    void reply.header('Cache-Control', 'private, max-age=60');
     return response;
     },
   );

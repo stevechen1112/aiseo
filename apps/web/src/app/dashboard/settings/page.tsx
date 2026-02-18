@@ -224,6 +224,7 @@ export default function SettingsPage() {
 
   // Usage upgrade CTA
   const [usageUpgradeStatus, setUsageUpgradeStatus] = useState<string>('');
+  const [billingLoading, setBillingLoading] = useState<string | null>(null); // plan key being checked out
 
   // Platform tenants form
   const [tenantCreateName, setTenantCreateName] = useState('');
@@ -1553,6 +1554,129 @@ export default function SettingsPage() {
                     </div>
 
                     {usageUpgradeStatus && <p className="text-xs text-gray-500 dark:text-gray-400">{usageUpgradeStatus}</p>}
+
+                    {/* Stripe upgrade plans */}
+                    <div className="rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/30 p-4 space-y-3">
+                      <p className="text-sm font-semibold text-indigo-900 dark:text-indigo-200">Upgrade your plan</p>
+                      <p className="text-xs text-indigo-700 dark:text-indigo-400">All plans include a 14-day free trial. Click to start a checkout via Stripe.</p>
+                      <div className="flex flex-wrap gap-3">
+                        {(['starter', 'pro', 'team'] as const).map((plan) => (
+                          <button
+                            key={plan}
+                            disabled={!!billingLoading}
+                            onClick={async () => {
+                              setBillingLoading(plan);
+                              try {
+                                const res = await fetch('/api/billing/checkout', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                                  body: JSON.stringify({
+                                    plan,
+                                    successUrl: `${window.location.origin}/dashboard/settings?tab=usage&billing=success`,
+                                    cancelUrl: `${window.location.origin}/dashboard/settings?tab=usage`,
+                                  }),
+                                });
+                                if (!res.ok) {
+                                  const err = await res.json().catch(() => ({}));
+                                  alert(`Billing error: ${(err as any).error ?? res.statusText}`);
+                                  return;
+                                }
+                                const { url } = await res.json() as { url: string };
+                                window.location.href = url;
+                              } catch (e) {
+                                alert(`Network error: ${e instanceof Error ? e.message : String(e)}`);
+                              } finally {
+                                setBillingLoading(null);
+                              }
+                            }}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50 capitalize"
+                          >
+                            {billingLoading === plan ? 'Redirecting…' : `Upgrade to ${plan}`}
+                          </button>
+                        ))}
+                        <button
+                          disabled={!!billingLoading}
+                          onClick={async () => {
+                            setBillingLoading('portal');
+                            try {
+                              const res = await fetch('/api/billing/portal', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                                body: JSON.stringify({ returnUrl: window.location.href }),
+                              });
+                              if (!res.ok) {
+                                const err = await res.json().catch(() => ({}));
+                                alert(`Portal error: ${(err as any).error ?? res.statusText}`);
+                                return;
+                              }
+                              const { url } = await res.json() as { url: string };
+                              window.location.href = url;
+                            } catch (e) {
+                              alert(`Network error: ${e instanceof Error ? e.message : String(e)}`);
+                            } finally {
+                              setBillingLoading(null);
+                            }
+                          }}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-300 dark:border-indigo-700 bg-white dark:bg-gray-900 px-4 py-2 text-xs font-semibold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950 disabled:opacity-50"
+                        >
+                          {billingLoading === 'portal' ? 'Opening…' : 'Manage billing'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* BIZ-04: Quota progress bars with 80%/95% warnings */}
+                    {(() => {
+                      const d = tenantUsageQuery.data;
+                      const pct = (d.usage as any).percentages as Record<string, number | null> | undefined;
+                      if (!pct) return null;
+                      const bars: { label: string; pct: number | null }[] = [
+                        { label: 'Keywords', pct: pct.keywords ?? null },
+                        { label: 'API calls', pct: pct.apiCalls ?? null },
+                        { label: 'SERP jobs', pct: pct.serpJobs ?? null },
+                        { label: 'Crawl jobs', pct: pct.crawlJobs ?? null },
+                      ];
+                      const hasNear = bars.some((b) => b.pct !== null && b.pct >= 80);
+                      const hasCritical = bars.some((b) => b.pct !== null && b.pct >= 95);
+                      return (
+                        <div className="space-y-4">
+                          {hasCritical && (
+                            <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-sm text-red-800 dark:text-red-200 flex items-center gap-2">
+                              <svg className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
+                              <span><strong>Quota nearly exhausted.</strong> You are at or above 95% on one or more resources. Upgrade your plan to avoid service interruption.</span>
+                            </div>
+                          )}
+                          {!hasCritical && hasNear && (
+                            <div className="rounded-lg border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/30 px-4 py-3 text-sm text-orange-800 dark:text-orange-200 flex items-center gap-2">
+                              <svg className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 2a10 10 0 100 20A10 10 0 0012 2z" /></svg>
+                              <span><strong>Approaching quota limit.</strong> You have used over 80% of one or more resources this month.</span>
+                            </div>
+                          )}
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            {bars.map(({ label, pct: p }) => {
+                              const color = p === null ? 'bg-gray-200 dark:bg-gray-700' : p >= 95 ? 'bg-red-500' : p >= 80 ? 'bg-orange-400' : 'bg-indigo-500';
+                              return (
+                                <div key={label} className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-1.5">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{label}</span>
+                                    <span className={`text-xs font-semibold ${p !== null && p >= 95 ? 'text-red-600' : p !== null && p >= 80 ? 'text-orange-500' : 'text-gray-500 dark:text-gray-400'}`}>
+                                      {p !== null ? `${p}%` : '∞'}
+                                    </span>
+                                  </div>
+                                  <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                                    {p !== null && (
+                                      <div
+                                        className={`h-full rounded-full transition-all ${color}`}
+                                        style={{ width: `${p}%` }}
+                                      />
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
                       <table className="min-w-full">

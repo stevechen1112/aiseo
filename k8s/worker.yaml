@@ -1,0 +1,92 @@
+##############################################################################
+# Worker Deployment  (BullMQ job processor)
+##############################################################################
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aiseo-worker
+  labels:
+    app: aiseo-worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: aiseo-worker
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: aiseo-worker
+    spec:
+      # Allow workers to finish in-flight jobs gracefully
+      terminationGracePeriodSeconds: 120
+      containers:
+        - name: worker
+          image: "aiseo-worker:latest"
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: aiseo-secrets
+                  key: DATABASE_URL
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: aiseo-secrets
+                  key: REDIS_URL
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: aiseo-secrets
+                  key: JWT_SECRET
+          livenessProbe:
+            # Workers expose a minimal /health HTTP endpoint on port 3002
+            httpGet:
+              path: /health
+              port: 3002
+            initialDelaySeconds: 20
+            periodSeconds: 30
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3002
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+---
+##############################################################################
+# Worker HPA (scale on CPU; BullMQ queue depth would require KEDA)
+##############################################################################
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: aiseo-worker-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: aiseo-worker
+  minReplicas: 1
+  maxReplicas: 8
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 80

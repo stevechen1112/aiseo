@@ -421,7 +421,7 @@ try {
   // Manual verification
   const fullContent = cr.sections.map((s) => s.content).join(' ');
   const contentLower = fullContent.toLowerCase();
-  const primary = contentKeywords[0].toLowerCase();
+  const primary = contentKeywords[0]!.toLowerCase();
   const titleHasPrimary = cr.title.toLowerCase().includes(primary);
   const metaHasPrimary = cr.metaDescription.toLowerCase().includes(primary);
   const occurrences = (contentLower.match(new RegExp(primary, 'g')) ?? []).length;
@@ -1185,7 +1185,7 @@ try {
   log();
 
   assert('T19-01 有效 DAG 解析正確', dag.nodes.length === 4, `got ${dag.nodes.length}`);
-  assert('T19-02 依賴關係正確', dag.nodes[1].dependsOn?.[0] === 'research', `${dag.nodes[1].dependsOn}`);
+  assert('T19-02 依賴關係正確', dag.nodes[1]!.dependsOn?.[0] === 'research', `${dag.nodes[1]!.dependsOn}`);
 } catch (error) {
   assert('T19-01 有效 DAG 解析正確', false, String(error).slice(0, 200));
 }

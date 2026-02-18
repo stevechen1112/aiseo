@@ -2,6 +2,9 @@ import 'dotenv/config';
 
 import pg from 'pg';
 
+import { createRedisConnection, EventBus, postSlackWebhook } from '@aiseo/core';
+import { invalidateDashboardCache } from '../routes/dashboard.js';
+
 const pollIntervalMs = 5000;
 const batchSize = 50;
 const maxRetries = 3;
@@ -15,6 +18,11 @@ const pool = new pg.Pool({
   connectionString: databaseUrl,
 });
 
+// ── Shared EventBus (pub/sub to Redis + optional Slack webhook) ──────────────
+const _redis = createRedisConnection({ url: process.env.REDIS_URL ?? 'redis://localhost:6379' });
+const _bus = new EventBus({ redis: _redis, prefix: 'aiseo' });
+const _slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
+
 async function sleep(ms: number) {
   await new Promise((r) => setTimeout(r, ms));
 }
@@ -24,10 +32,52 @@ async function dispatchEvent(event: {
   event_type: string;
   payload: unknown;
 }) {
-  // Phase 0 stub: replace with WebSocket/Slack dispatch.
-  // Keep deterministic and fail-fast.
+  const payload = event.payload && typeof event.payload === 'object' ? (event.payload as Record<string, unknown>) : {};
+  const tenantId = typeof payload.tenantId === 'string' ? payload.tenantId : undefined;
+  const projectId = typeof payload.projectId === 'string' ? payload.projectId : undefined;
+
+  if (!tenantId) {
+    // eslint-disable-next-line no-console
+    console.warn(`[outbox] id=${event.id} missing tenantId — skipping pub/sub`);
+    return;
+  }
+
+  // Publish to Redis pub/sub so all connected WebSocket clients receive the event.
+  await _bus.publish({
+    tenantId,
+    projectId,
+    type: event.event_type as import('@aiseo/core').AgentEventType,
+    payload,
+  });
+
+  // Invalidate dashboard cache for any event that changes metrics shown on the dashboard.
+  const CACHE_INVALIDATING_EVENTS = new Set([
+    'agent.task.completed',
+    'serp.rank.anomaly',
+    'report.ready',
+  ]);
+  if (CACHE_INVALIDATING_EVENTS.has(event.event_type) && projectId) {
+    await invalidateDashboardCache(tenantId, projectId);
+  }
+
+  // Best-effort Slack notification (non-blocking, won't block commit).
+  if (_slackWebhookUrl) {
+    const text = [
+      `*[AISEO]* ${event.event_type}`,
+      `tenant=${tenantId}`,
+      projectId ? `project=${projectId}` : undefined,
+    ]
+      .filter(Boolean)
+      .join(' | ');
+
+    void postSlackWebhook(_slackWebhookUrl, { text }).catch((err: unknown) => {
+      // eslint-disable-next-line no-console
+      console.warn('[outbox] slack webhook error', err);
+    });
+  }
+
   // eslint-disable-next-line no-console
-  console.log(`[outbox] dispatch id=${event.id} type=${event.event_type}`);
+  console.log(`[outbox] dispatched id=${event.id} type=${event.event_type} tenant=${tenantId}`);
 }
 
 async function pollOnce() {
@@ -92,3 +142,19 @@ async function main() {
 }
 
 await main();
+
+process.on('SIGINT', async () => {
+  // eslint-disable-next-line no-console
+  console.log('[outbox] shutting down');
+  _redis.disconnect();
+  await pool.end();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  // eslint-disable-next-line no-console
+  console.log('[outbox] shutting down (SIGTERM)');
+  _redis.disconnect();
+  await pool.end();
+  process.exit(0);
+});

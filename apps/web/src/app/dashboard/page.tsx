@@ -16,6 +16,7 @@ import { useDashboardMetrics, useAgentActivities, useAlerts, useWorkflowStatuses
 import { formatRelativeTime } from '@/lib/utils';
 import { useWebSocket, WebSocketEvents } from '@/lib/websocket';
 import { useAuth } from '@/lib/auth-context';
+import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard';
 
 export default function DashboardPage() {
   const { token } = useAuth();
@@ -65,21 +66,41 @@ export default function DashboardPage() {
   });
 
   useEffect(() => {
+    // Fast path: check localStorage cache first (avoids flash on cold load)
     try {
-      const seen = localStorage.getItem('aiseo_onboarding_seen_v1');
-      setShowOnboarding(!seen);
-    } catch {
-      setShowOnboarding(true);
-    }
-  }, []);
+      const cached = localStorage.getItem('aiseo_onboarding_seen_v1');
+      if (cached) { setShowOnboarding(false); return; }
+    } catch { /* ignore */ }
+
+    // Slower path: ask the server (survives cache clears & device switches)
+    if (!token) { setShowOnboarding(true); return; }
+
+    fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data: any) => {
+        const seenAt = data?.user?.settings?.onboardingSeenAt;
+        setShowOnboarding(!seenAt);
+        if (seenAt) {
+          try { localStorage.setItem('aiseo_onboarding_seen_v1', seenAt); } catch { /* ignore */ }
+        }
+      })
+      .catch(() => setShowOnboarding(true));
+  }, [token]);
 
   const dismissOnboarding = () => {
-    try {
-      localStorage.setItem('aiseo_onboarding_seen_v1', new Date().toISOString());
-    } catch {
-      // ignore
-    }
+    const now = new Date().toISOString();
+    // Optimistically update UI
     setShowOnboarding(false);
+    // Cache locally
+    try { localStorage.setItem('aiseo_onboarding_seen_v1', now); } catch { /* ignore */ }
+    // Persist to server (best-effort — not awaited)
+    if (token) {
+      fetch('/api/auth/me', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ settings: { onboardingSeenAt: now } }),
+      }).catch(() => {/* ignore non-critical */});
+    }
   };
 
   return (
@@ -107,28 +128,11 @@ export default function DashboardPage() {
       </div>
 
       {showOnboarding && (
-        <div className="rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50 dark:bg-blue-900/20 p-6">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-semibold text-blue-900 dark:text-blue-200">Welcome to AISEO</h2>
-              <p className="mt-1 text-sm text-blue-800/80 dark:text-blue-200/80">
-                Quick start checklist for your first login.
-              </p>
-              <ul className="mt-4 space-y-2 text-sm text-blue-900 dark:text-blue-200">
-                <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4" /> Verify your email (check the link we sent).</li>
-                <li className="flex items-center gap-2"><Clock className="h-4 w-4" /> Confirm your project domain in Settings.</li>
-                <li className="flex items-center gap-2"><Activity className="h-4 w-4" /> Run your first workflow from Agents.</li>
-              </ul>
-            </div>
-            <button
-              type="button"
-              onClick={dismissOnboarding}
-              className="rounded-lg border border-blue-200 dark:border-blue-900 px-3 py-2 text-sm font-semibold text-blue-900 dark:text-blue-200 hover:bg-blue-100 dark:hover:bg-blue-900/30"
-            >
-              Dismiss
-            </button>
-          </div>
-        </div>
+        <OnboardingWizard
+          token={token ?? undefined}
+          onDismiss={dismissOnboarding}
+          onComplete={dismissOnboarding}
+        />
       )}
 
       {/* Key Metrics */}

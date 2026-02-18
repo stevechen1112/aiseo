@@ -89,7 +89,7 @@ async function testLlmChatTool() {
     maxTokens: 100,
   };
 
-  log(`\n→ Calling llm.chat with prompt: "${input.messages[1].content}"`);
+  log(`\n→ Calling llm.chat with prompt: "${input.messages[1]!.content}"`);
   
   const startTime = Date.now();
   const result = await registry.run<LlmChatInput, LlmChatOutput>('llm.chat', input, ctx);

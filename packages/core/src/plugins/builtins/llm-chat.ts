@@ -92,11 +92,11 @@ export const llmChatTool: ToolDefinition<LlmChatInput, LlmChatOutput> = {
       model?: string;
     };
 
-    if (!data.choices || data.choices.length === 0 || !data.choices[0].message?.content) {
+    if (!data.choices || data.choices.length === 0 || !data.choices[0]?.message?.content) {
       throw new Error('llm.chat: No valid response from LLM (empty choices)');
     }
 
-    const content = data.choices[0].message.content;
+    const content = data.choices[0]!.message!.content;
 
     return {
       content,

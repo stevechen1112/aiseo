@@ -408,7 +408,7 @@ export const auditRoutes: FastifyPluginAsync = async (fastify) => {
           : null,
       }));
 
-      const nextCursor = items.length > 0 ? String(items[items.length - 1].createdAt) : null;
+      const nextCursor = items.length > 0 ? String(items[items.length - 1]!.createdAt) : null;
       return { ok: true, items, nextCursor };
     },
   );

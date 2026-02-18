@@ -371,7 +371,7 @@ export class InternalLinkerAgent extends BaseAgent<InternalLinkerInput, Internal
     // Use page title (truncated)
     if (page.title) {
       suggestions.push(page.title);
-      const shortTitle = page.title.split('-')[0].trim();
+      const shortTitle = (page.title.split('-')[0] ?? page.title).trim();
       if (shortTitle !== page.title) {
         suggestions.push(shortTitle);
       }
@@ -380,7 +380,7 @@ export class InternalLinkerAgent extends BaseAgent<InternalLinkerInput, Internal
     // Use top keywords
     if (page.keywords.length > 0) {
       suggestions.push(page.keywords.slice(0, 2).join(' '));
-      suggestions.push(page.keywords[0]);
+      suggestions.push(page.keywords[0]!);
     }
 
     // Add semantic variations

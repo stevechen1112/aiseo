@@ -32,6 +32,8 @@ export * from './plugins/builtins/web-crawler.js';
 export * from './event-bus/bus.js';
 export * from './event-bus/types.js';
 
+export * from './cache/redis-cache.js';
+
 export * from './notifications/slack.js';
 export * from './notifications/email.js';
 
@@ -56,3 +58,4 @@ export * from './agents/content-refresher.js';
 
 export * from './serp/types.js';
 export * from './serp/client.js';
+export * from './serp/client-cached.js';

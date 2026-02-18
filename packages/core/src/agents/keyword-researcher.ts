@@ -218,7 +218,7 @@ ${list.map((k) => `- ${k}`).join('\n')}
     const result = await ctx.tools.run<LlmChatInput, LlmChatOutput>('llm.chat', llmInput, ctx);
     let jsonText = result.content.trim();
     const m = jsonText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-    if (m) jsonText = m[1];
+    if (m) jsonText = m[1] ?? jsonText;
 
     const parsed = JSON.parse(jsonText) as { intents?: Array<{ keyword: string; intent: string; confidence: number }> };
     const intents = (parsed.intents ?? [])

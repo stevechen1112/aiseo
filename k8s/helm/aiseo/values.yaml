@@ -1,0 +1,89 @@
+# AISEO Helm Chart — values.yaml
+# Override these values per environment (staging / production).
+
+replicaCount:
+  api: 2
+  web: 2
+  worker: 2
+
+image:
+  registry: ""  # e.g. ghcr.io/your-org
+  api:
+    repository: aiseo-api
+    tag: latest
+    pullPolicy: IfNotPresent
+  web:
+    repository: aiseo-web
+    tag: latest
+    pullPolicy: IfNotPresent
+  worker:
+    repository: aiseo-worker
+    tag: latest
+    pullPolicy: IfNotPresent
+
+service:
+  api:
+    type: ClusterIP
+    port: 3001
+  web:
+    type: ClusterIP
+    port: 3000
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: app.example.com
+      paths:
+        - path: /api
+          service: api
+        - path: /
+          service: web
+  tls: []
+
+resources:
+  api:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+  web:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+  worker:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+
+autoscaling:
+  enabled: true
+  api:
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+  web:
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+  worker:
+    minReplicas: 1
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 80
+
+env:
+  # Required secrets — set via --set or a Kubernetes Secret
+  DATABASE_URL: ""
+  REDIS_URL: ""
+  JWT_SECRET: ""
+  JWT_REFRESH_SECRET: ""
+  NODE_ENV: production

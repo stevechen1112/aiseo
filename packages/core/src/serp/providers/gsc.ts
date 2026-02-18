@@ -72,7 +72,7 @@ export class GoogleSearchConsoleProvider implements SerpProvider {
       const data = (await response.json()) as GscSearchAnalyticsResponse;
 
       if (data.rows && data.rows.length > 0) {
-        const row = data.rows[0];
+        const row = data.rows[0]!;
         // GSC returns average position (float), round to nearest integer
         const rank = Math.round(row.position);
 
@@ -105,6 +105,6 @@ export class GoogleSearchConsoleProvider implements SerpProvider {
   private getDateDaysAgo(daysAgo: number): string {
     const date = new Date();
     date.setDate(date.getDate() - daysAgo);
-    return date.toISOString().split('T')[0]; // YYYY-MM-DD
+    return date.toISOString().split('T')[0] ?? ''; // YYYY-MM-DD
   }
 }

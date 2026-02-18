@@ -1,0 +1,50 @@
+##############################################################################
+# NGINX Ingress — routes /api/* to API, everything else to Web
+##############################################################################
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: aiseo-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: app.example.com
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: aiseo-api
+                port:
+                  number: 3001
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: aiseo-web
+                port:
+                  number: 3000
+  # tls:
+  #   - hosts:
+  #       - app.example.com
+  #     secretName: aiseo-tls-cert
+---
+##############################################################################
+# Shared Secrets placeholder — fill with real values before applying
+# Better: use External Secrets Operator + AWS Secrets Manager / Vault
+##############################################################################
+apiVersion: v1
+kind: Secret
+metadata:
+  name: aiseo-secrets
+type: Opaque
+stringData:
+  DATABASE_URL: "postgresql://aiseo:aiseo@postgres:5432/aiseo"
+  REDIS_URL: "redis://redis:6379"
+  JWT_SECRET: "CHANGE_ME_at_least_32_chars_long_secret"
+  JWT_REFRESH_SECRET: "CHANGE_ME_at_least_32_chars_refresh"

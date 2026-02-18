@@ -46,6 +46,10 @@ async function resolveDefaultProjectId(client: import('pg').PoolClient): Promise
 const listQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(200).default(20),
+  // PERF-05: Cursor-based pagination.
+  // cursor = base64-encoded JSON: { checkedAt: ISO string, id: string }
+  // When provided, `page` is ignored and cursor-pagination is used instead of OFFSET.
+  cursor: z.string().optional(),
 });
 
 const distributionQuerySchema = z.object({
@@ -139,7 +143,11 @@ export const keywordsRoutes: FastifyPluginAsync = async (fastify) => {
           '```\n',
         querystring: {
           type: 'object',
-          properties: { page: { type: 'number' }, limit: { type: 'number' } },
+          properties: {
+            page: { type: 'number' },
+            limit: { type: 'number' },
+            cursor: { type: 'string', description: 'Opaque pagination cursor returned by previous response (base64 JSON). When provided, `page` is ignored.' },
+          },
           additionalProperties: true,
         },
         response: {
@@ -148,6 +156,7 @@ export const keywordsRoutes: FastifyPluginAsync = async (fastify) => {
             properties: {
               data: { type: 'array', items: { type: 'object', additionalProperties: true } },
               total: { type: 'number' },
+              nextCursor: { type: 'string', description: 'Pass as `cursor` in the next request to get the next page. Undefined when no more results.' },
             },
             required: ['data', 'total'],
             additionalProperties: true,
@@ -159,42 +168,96 @@ export const keywordsRoutes: FastifyPluginAsync = async (fastify) => {
     const client = await requireDb(req);
     const projectId = await resolveDefaultProjectId(client);
     const query = listQuerySchema.parse(req.query ?? {});
-    const offset = (query.page - 1) * query.limit;
 
     const totalRows = await client.query('SELECT COUNT(*)::int AS total FROM keywords WHERE project_id = $1', [projectId]);
     const total = Number(totalRows.rows[0]?.total ?? 0);
 
-    const rows = await client.query(
-      `SELECT
-         k.id,
-         k.keyword,
-         k.created_at,
-         lr.rank AS latest_rank,
-         lr.result_url AS latest_url,
-         lr.checked_at AS latest_checked_at,
-         pr.rank AS prev_rank
-       FROM keywords k
-       LEFT JOIN LATERAL (
-         SELECT r.rank, r.result_url, r.checked_at
-         FROM keyword_ranks r
-         WHERE r.keyword_id = k.id
-         ORDER BY r.checked_at DESC
-         LIMIT 1
-       ) lr ON true
-       LEFT JOIN LATERAL (
-         SELECT r.rank
-         FROM keyword_ranks r
-         WHERE r.keyword_id = k.id
-         ORDER BY r.checked_at DESC
-         OFFSET 1
-         LIMIT 1
-       ) pr ON true
-       WHERE k.project_id = $1
-       ORDER BY COALESCE(lr.checked_at, k.created_at) DESC
-       LIMIT $2
-       OFFSET $3`,
-      [projectId, query.limit, offset],
-    );
+    // PERF-05: Cursor-based pagination (preferred) vs. legacy OFFSET pagination.
+    // Cursor format: base64( JSON({ checkedAt: string | null, id: string }) )
+    type CursorPayload = { checkedAt: string | null; id: string };
+
+    let rows: import('pg').QueryResult;
+
+    if (query.cursor) {
+      // Cursor mode — O(1) regardless of page depth
+      let cursorData: CursorPayload;
+      try {
+        cursorData = JSON.parse(Buffer.from(query.cursor, 'base64').toString('utf8')) as CursorPayload;
+      } catch {
+        const err = new Error('Invalid cursor');
+        (err as any).statusCode = 400;
+        throw err;
+      }
+
+      rows = await client.query(
+        `SELECT
+           k.id,
+           k.keyword,
+           k.created_at,
+           lr.rank AS latest_rank,
+           lr.result_url AS latest_url,
+           lr.checked_at AS latest_checked_at,
+           pr.rank AS prev_rank
+         FROM keywords k
+         LEFT JOIN LATERAL (
+           SELECT r.rank, r.result_url, r.checked_at
+           FROM keyword_ranks r
+           WHERE r.keyword_id = k.id
+           ORDER BY r.checked_at DESC
+           LIMIT 1
+         ) lr ON true
+         LEFT JOIN LATERAL (
+           SELECT r.rank
+           FROM keyword_ranks r
+           WHERE r.keyword_id = k.id
+           ORDER BY r.checked_at DESC
+           OFFSET 1
+           LIMIT 1
+         ) pr ON true
+         WHERE k.project_id = $1
+           AND (
+             COALESCE(lr.checked_at, k.created_at) < $2::timestamptz
+             OR (COALESCE(lr.checked_at, k.created_at) = $2::timestamptz AND k.id < $3)
+           )
+         ORDER BY COALESCE(lr.checked_at, k.created_at) DESC, k.id DESC
+         LIMIT $4`,
+        [projectId, cursorData.checkedAt, cursorData.id, query.limit],
+      );
+    } else {
+      // Legacy OFFSET mode (kept for backward-compatibility with existing UI)
+      const offset = (query.page - 1) * query.limit;
+      rows = await client.query(
+        `SELECT
+           k.id,
+           k.keyword,
+           k.created_at,
+           lr.rank AS latest_rank,
+           lr.result_url AS latest_url,
+           lr.checked_at AS latest_checked_at,
+           pr.rank AS prev_rank
+         FROM keywords k
+         LEFT JOIN LATERAL (
+           SELECT r.rank, r.result_url, r.checked_at
+           FROM keyword_ranks r
+           WHERE r.keyword_id = k.id
+           ORDER BY r.checked_at DESC
+           LIMIT 1
+         ) lr ON true
+         LEFT JOIN LATERAL (
+           SELECT r.rank
+           FROM keyword_ranks r
+           WHERE r.keyword_id = k.id
+           ORDER BY r.checked_at DESC
+           OFFSET 1
+           LIMIT 1
+         ) pr ON true
+         WHERE k.project_id = $1
+         ORDER BY COALESCE(lr.checked_at, k.created_at) DESC
+         LIMIT $2
+         OFFSET $3`,
+        [projectId, query.limit, offset],
+      );
+    }
 
     const data = rows.rows.map((r) => {
       const keyword = String(r.keyword);
@@ -215,7 +278,17 @@ export const keywordsRoutes: FastifyPluginAsync = async (fastify) => {
       };
     });
 
-    return { data, total };
+    // Build nextCursor from the last row (only when a full page was returned)
+    let nextCursor: string | undefined;
+    if (data.length === query.limit && rows.rows.length > 0) {
+      const lastRow = rows.rows[rows.rows.length - 1];
+      const payload: CursorPayload = {
+        checkedAt: lastRow.latest_checked_at ? (lastRow.latest_checked_at as Date).toISOString() : null,
+        id: String(lastRow.id),
+      };
+      nextCursor = Buffer.from(JSON.stringify(payload)).toString('base64');
+    }
+
+    return { data, total, ...(nextCursor ? { nextCursor } : {}) };
     },
-  );
-};
+  );};

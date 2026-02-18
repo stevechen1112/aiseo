@@ -405,6 +405,25 @@ export const tenantsRoutes: FastifyPluginAsync = async (fastify) => {
           max: quotas.keywordsMax,
           remaining: keywordsCap.remaining,
         },
+        // BIZ-04: percentage values (null when limit is unlimited)
+        percentages: {
+          apiCalls:
+            quotas.apiCallsPerMonth !== null
+              ? Math.min(100, Math.round((usage.apiCalls / quotas.apiCallsPerMonth) * 100))
+              : null,
+          serpJobs:
+            quotas.serpJobsPerMonth !== null
+              ? Math.min(100, Math.round((usage.serpJobs / quotas.serpJobsPerMonth) * 100))
+              : null,
+          crawlJobs:
+            quotas.crawlJobsPerMonth !== null
+              ? Math.min(100, Math.round((usage.crawlJobs / quotas.crawlJobsPerMonth) * 100))
+              : null,
+          keywords:
+            quotas.keywordsMax !== null
+              ? Math.min(100, Math.round((keywordsCap.current / quotas.keywordsMax) * 100))
+              : null,
+        },
       },
       history,
     };

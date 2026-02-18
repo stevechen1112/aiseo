@@ -1,5 +1,6 @@
 import type { PoolClient } from 'pg';
 
+import { redisIncrQuota } from './redis-quota.js';
 import type { TenantQuotaConfig } from './tenant-quotas.js';
 import { currentUsagePeriodKey } from './tenant-quotas.js';
 
@@ -100,44 +101,26 @@ export async function incrementApiCallsOrThrow(
   period = currentUsagePeriodKey(),
 ) {
   const limit = quotas.apiCallsPerMonth;
-  if (limit === null) {
-    await ensureTenantUsageRow(client, tenantId, period);
-    await client.query(
-      `UPDATE tenant_usage
-       SET api_calls = api_calls + 1, updated_at = NOW()
-       WHERE tenant_id = $1 AND period = $2`,
-      [tenantId, period],
-    );
-    return;
+
+  // Fast path: atomic Redis increment (PERF-01)
+  const result = await redisIncrQuota(tenantId, 'api_calls', 1, limit, period);
+  if (!result.ok) {
+    await maybeEmitQuotaEvent(client, tenantId, {
+      tenantId,
+      period,
+      kind: 'api_calls',
+      limit: result.limit,
+      current: result.current,
+    });
+    throw quotaExceededError('API quota exceeded', {
+      kind: 'api_calls',
+      period,
+      limit: result.limit,
+      current: result.current,
+      requested: 1,
+    });
   }
-
-  await ensureTenantUsageRow(client, tenantId, period);
-
-  const updated = await client.query(
-    `UPDATE tenant_usage
-     SET api_calls = api_calls + 1, updated_at = NOW()
-     WHERE tenant_id = $1 AND period = $2 AND api_calls < $3
-     RETURNING api_calls`,
-    [tenantId, period, limit],
-  );
-
-  if ((updated.rowCount ?? 0) > 0) return;
-
-  const usage = await getTenantUsage(client, tenantId, period);
-  await maybeEmitQuotaEvent(client, tenantId, {
-    tenantId,
-    period,
-    kind: 'api_calls',
-    limit,
-    current: usage.apiCalls,
-  });
-  throw quotaExceededError('API quota exceeded', {
-    kind: 'api_calls',
-    period,
-    limit,
-    current: usage.apiCalls,
-    requested: 1,
-  });
+  return;
 }
 
 export async function reserveSerpJobsOrThrow(
@@ -150,45 +133,26 @@ export async function reserveSerpJobsOrThrow(
   const limit = quotas.serpJobsPerMonth;
   if (requested <= 0) return;
 
-  if (limit === null) {
-    await ensureTenantUsageRow(client, tenantId, period);
-    await client.query(
-      `UPDATE tenant_usage
-       SET serp_jobs = serp_jobs + $3, updated_at = NOW()
-       WHERE tenant_id = $1 AND period = $2`,
-      [tenantId, period, requested],
-    );
-    return;
+  // Fast path: atomic Redis increment (PERF-01)
+  const result = await redisIncrQuota(tenantId, 'serp_jobs', requested, limit, period);
+  if (!result.ok) {
+    await maybeEmitQuotaEvent(client, tenantId, {
+      tenantId,
+      period,
+      kind: 'serp_jobs',
+      limit: result.limit,
+      current: result.current,
+      requested,
+    });
+    throw quotaExceededError('SERP quota exceeded', {
+      kind: 'serp_jobs',
+      period,
+      limit: result.limit,
+      current: result.current,
+      requested,
+    });
   }
-
-  await ensureTenantUsageRow(client, tenantId, period);
-
-  const updated = await client.query(
-    `UPDATE tenant_usage
-     SET serp_jobs = serp_jobs + $3, updated_at = NOW()
-     WHERE tenant_id = $1 AND period = $2 AND (serp_jobs + $3) <= $4
-     RETURNING serp_jobs`,
-    [tenantId, period, requested, limit],
-  );
-
-  if ((updated.rowCount ?? 0) > 0) return;
-
-  const usage = await getTenantUsage(client, tenantId, period);
-  await maybeEmitQuotaEvent(client, tenantId, {
-    tenantId,
-    period,
-    kind: 'serp_jobs',
-    limit,
-    current: usage.serpJobs,
-    requested,
-  });
-  throw quotaExceededError('SERP quota exceeded', {
-    kind: 'serp_jobs',
-    period,
-    limit,
-    current: usage.serpJobs,
-    requested,
-  });
+  return;
 }
 
 export async function reserveCrawlJobsOrThrow(
@@ -201,45 +165,25 @@ export async function reserveCrawlJobsOrThrow(
   const limit = quotas.crawlJobsPerMonth;
   if (requested <= 0) return;
 
-  if (limit === null) {
-    await ensureTenantUsageRow(client, tenantId, period);
-    await client.query(
-      `UPDATE tenant_usage
-       SET crawl_jobs = crawl_jobs + $3, updated_at = NOW()
-       WHERE tenant_id = $1 AND period = $2`,
-      [tenantId, period, requested],
-    );
-    return;
+  // Fast path: atomic Redis increment (PERF-01)
+  const result = await redisIncrQuota(tenantId, 'crawl_jobs', requested, limit, period);
+  if (!result.ok) {
+    await maybeEmitQuotaEvent(client, tenantId, {
+      tenantId,
+      period,
+      kind: 'crawl_jobs',
+      limit: result.limit,
+      current: result.current,
+      requested,
+    });
+    throw quotaExceededError('Crawl quota exceeded', {
+      kind: 'crawl_jobs',
+      period,
+      limit: result.limit,
+      current: result.current,
+      requested,
+    });
   }
-
-  await ensureTenantUsageRow(client, tenantId, period);
-
-  const updated = await client.query(
-    `UPDATE tenant_usage
-     SET crawl_jobs = crawl_jobs + $3, updated_at = NOW()
-     WHERE tenant_id = $1 AND period = $2 AND (crawl_jobs + $3) <= $4
-     RETURNING crawl_jobs`,
-    [tenantId, period, requested, limit],
-  );
-
-  if ((updated.rowCount ?? 0) > 0) return;
-
-  const usage = await getTenantUsage(client, tenantId, period);
-  await maybeEmitQuotaEvent(client, tenantId, {
-    tenantId,
-    period,
-    kind: 'crawl_jobs',
-    limit,
-    current: usage.crawlJobs,
-    requested,
-  });
-  throw quotaExceededError('Crawl quota exceeded', {
-    kind: 'crawl_jobs',
-    period,
-    limit,
-    current: usage.crawlJobs,
-    requested,
-  });
 }
 
 export async function getKeywordCapacity(
@@ -248,7 +192,7 @@ export async function getKeywordCapacity(
   keywordsMax: number | null,
 ): Promise<{ remaining: number | null; current: number }> {
   const row = await client.query(
-    `SELECT COUNT(*)::int AS total
+    `SELECT COUNT(*) AS total
      FROM keywords k
      JOIN projects p ON p.id = k.project_id
      WHERE p.tenant_id = $1`,

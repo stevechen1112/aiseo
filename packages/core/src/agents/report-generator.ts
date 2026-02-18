@@ -198,8 +198,8 @@ export class ReportGeneratorAgent extends BaseAgent<ReportGeneratorInput, Report
     }
 
     return {
-      startDate: startDate.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0],
+      startDate: startDate.toISOString().split('T')[0] ?? '',
+      endDate: endDate.toISOString().split('T')[0] ?? '',
     };
   }
 
@@ -645,7 +645,7 @@ export class ReportGeneratorAgent extends BaseAgent<ReportGeneratorInput, Report
     const keyHighlights: string[] = [];
     sections.forEach(section => {
       if (section.insights.length > 0) {
-        keyHighlights.push(section.insights[0]);
+        keyHighlights.push(section.insights[0]!);
       }
     });
 

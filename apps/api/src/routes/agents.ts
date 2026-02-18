@@ -8,6 +8,12 @@ import { env } from '../config/env.js';
 import { computeTenantQuotas } from '../quotas/tenant-quotas.js';
 import { reserveCrawlJobsOrThrow } from '../quotas/usage.js';
 
+// ── Module-level singletons (created once, reused across requests) ──────────
+// Creating a new Redis connection + Queue per-request was leaking connections.
+const _agentRedis = createRedisConnection({ url: env.REDIS_URL });
+const _smartAgentsQueue = new Queue('smart-agents', { connection: _agentRedis, prefix: 'aiseo' });
+const _autoTasksQueue = new Queue('auto-tasks', { connection: _agentRedis, prefix: 'aiseo' });
+
 const keywordResearchSchema = z.object({
   projectId: z.string().uuid(),
   seedKeyword: z.string().min(1),
@@ -30,28 +36,20 @@ export const agentsRoutes: FastifyPluginAsync = async (fastify) => {
       await reserveCrawlJobsOrThrow(req.dbClient, tenantId, 1, quotas);
     }
 
-    const redis = createRedisConnection({ url: env.REDIS_URL });
-    const queue = new Queue('smart-agents', { connection: redis, prefix: 'aiseo' });
+    const job = await _smartAgentsQueue.add(
+      'keyword-researcher',
+      {
+        tenantId,
+        projectId: input.projectId,
+        seedKeyword: input.seedKeyword,
+      },
+      {
+        removeOnComplete: 1000,
+        removeOnFail: 1000,
+      },
+    );
 
-    try {
-      const job = await queue.add(
-        'keyword-researcher',
-        {
-          tenantId,
-          projectId: input.projectId,
-          seedKeyword: input.seedKeyword,
-        },
-        {
-          removeOnComplete: 1000,
-          removeOnFail: 1000,
-        },
-      );
-
-      return { ok: true, jobId: job.id };
-    } finally {
-      await queue.close();
-      redis.disconnect();
-    }
+    return { ok: true, jobId: job.id };
   };
 
   // Backward-compatible endpoint (kept for older clients/docs)
@@ -147,12 +145,7 @@ export const agentsRoutes: FastifyPluginAsync = async (fastify) => {
       throw error;
     }
 
-    const redis = createRedisConnection({ url: env.REDIS_URL });
-    const smartAgentsQueue = new Queue('smart-agents', { connection: redis, prefix: 'aiseo' });
-    const autoTasksQueue = new Queue('auto-tasks', { connection: redis, prefix: 'aiseo' });
-
-    try {
-      const getRecent = async (queue: Queue) => {
+    const getRecent = async (queue: Queue) => {
         const [active, waiting, completed, failed] = await Promise.all([
           queue.getJobs(['active'], 0, 25, true),
           queue.getJobs(['waiting', 'delayed'], 0, 25, true),
@@ -168,7 +161,7 @@ export const agentsRoutes: FastifyPluginAsync = async (fastify) => {
         ];
       };
 
-      const [smart, auto] = await Promise.all([getRecent(smartAgentsQueue), getRecent(autoTasksQueue)]);
+      const [smart, auto] = await Promise.all([getRecent(_smartAgentsQueue), getRecent(_autoTasksQueue)]);
       const all = [...smart, ...auto];
 
       const activities = all
@@ -208,10 +201,6 @@ export const agentsRoutes: FastifyPluginAsync = async (fastify) => {
 
       activities.sort((a, b) => (a.startedAt > b.startedAt ? -1 : 1));
       return activities.slice(0, 50);
-    } finally {
-      await Promise.all([smartAgentsQueue.close(), autoTasksQueue.close()]);
-      redis.disconnect();
-    }
     },
   );
 };

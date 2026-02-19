@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   Bot,
+  Sparkles,
   Search,
   FileText,
   Activity,
@@ -78,7 +79,13 @@ export default function DashboardLayout({
 
       <nav className="flex flex-col gap-1 p-4">
         <NavItem href={base} icon={<LayoutDashboard className="h-5 w-5" />} label="Overview" active={pathname === base} />
-        <NavItem href={`${base}/agents`} icon={<Bot className="h-5 w-5" />} label="Agents" active={pathname.startsWith(`${base}/agents`)} />
+        <NavItem
+          href={`${base}/agents`}
+          icon={<Bot className="h-5 w-5" />}
+          label="Agents"
+          active={pathname.startsWith(`${base}/agents`) && !pathname.startsWith(`${base}/agents/field`)}
+        />
+        <NavItem href={`${base}/agents/field`} icon={<Sparkles className="h-5 w-5" />} label="Agent Field" active={pathname.startsWith(`${base}/agents/field`)} />
         <NavItem href={`${base}/keywords`} icon={<Search className="h-5 w-5" />} label="Keywords" active={pathname.startsWith(`${base}/keywords`)} />
         <NavItem href={`${base}/content`} icon={<FileText className="h-5 w-5" />} label="Content" active={pathname.startsWith(`${base}/content`)} />
         <NavItem href={`${base}/audit`} icon={<Activity className="h-5 w-5" />} label="Audit" active={pathname.startsWith(`${base}/audit`)} />

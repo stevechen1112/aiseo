@@ -8,6 +8,7 @@ const __dirname = path.dirname(__filename);
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@aiseo/core'],
+  allowedDevOrigins: ['127.0.0.1'],
   output: 'standalone',
   eslint: {
     ignoreDuringBuilds: true,

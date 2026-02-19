@@ -6,7 +6,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://www.postgresql.org/)
 
 > **專案狀態**: 全部優化任務完成 (100%)，編譯驗證通過，可進行正式部署。
-> **最後更新**: 2026-02-19 — 優化 v2 交付完成（25 項功能 + 9 項 code review 修正 + 2 項收尾）。
+> **最後更新**: 2026-02-19 — Agent Field UI 交付完成（視覺化代理指揮場景 + Code Review 全修正 + Accessibility + E2E 通過）。
 
 AISEO 是一個高度自動化、基於代理人框架 (Agentic Framework) 的企業級 SEO 優化平台。系統核心由 **12 個專業 AI 代理** (6 Smart Agents + 6 Auto Tasks) 組成，能自主完成關鍵字研究、排名追蹤、內容創作、技術審核及競爭對手分析。
 
@@ -56,6 +56,13 @@ AISEO 是一個高度自動化、基於代理人框架 (Agentic Framework) 的�
 - **次世代 UI**：使用 Next.js 15 與 Tailwind CSS 構建的響應式深色主題界面。
 - **互動式圖表**：集成 Recharts、Cytoscape.js (話題聚類圖) 與 FullCalendar。
 - **WebSocket 同步**：透過 `/ws/events` 實現代理狀態、排名警報與系統事件的毫秒級推送。
+
+### 5. Agent Field — 視覺化代理指揮場景
+- **SVG 指揮場景**：12 個代理在 `/dashboard/agents/field` 以動態 SVG 場景呈現，支援任務指派與即時狀態可視化。
+- **任務投擲動畫**：點擊 Task Box 後選擇代理，觸發拋物線投擲動畫 (Framer Motion) 並即時更新狀態。
+- **配額壓力 HUD**：Counter HUD 顯示 running/completed/failed 計數，配額壓力儀表自動計算最高使用率軸。
+- **Rive 動畫整合**：透過 `NEXT_PUBLIC_RIVE_AGENT_SRC` 啟用 `.riv` 動畫角色 (商業授權選配)，未設定時自動 fallback Framer Motion SVG。
+- **無障礙設計**：所有代理按鈕具備 `aria-label`、`aria-pressed` 及 `focus-visible` ring，符合 WCAG 鍵盤操作標準。
 
 ### 5. 高安全性與強健性 (Security & Reliability)
 - **加密防護**：API Key 與 Webhook Secret 使用 AES-256-GCM 加密存儲。
@@ -114,8 +121,10 @@ AISEO/
 │   └── web/                    # Next.js 15 Dashboard
 │       ├── src/app/            # App Router pages
 │       ├── src/components/     # UI components
+│       │   └── agent-field/    # Agent Field 場景元件群 (AgentFieldScene, AgentBot, HUD ...)
 │       ├── src/lib/            # API client, auth, websocket
-│       └── e2e/                # Playwright E2E tests
+│       │   └── agent-field-utils.ts  # Agent Field 純工具函式與常數
+│       └── e2e/                # Playwright E2E tests (含 agent-field.spec.ts)
 │
 ├── packages/
 │   └── core/                   # 共享核心邏輯
@@ -300,7 +309,7 @@ pnpm -C apps/web perf:lighthouse:prod  # Lighthouse 效能測試
 | **缺口驗證** | `system-gap-validation.ts` | `test:gap:utf8` | 9 項基礎設施 (API/DB/RLS/Outbox/Schedule/Runtime/E2E/Backup) |
 | **API 冒煙** | `smoke-phase0-3.ps1` | `pnpm smoke:phase0-3` | Bearer JWT 呼叫關鍵 API + RBAC/RLS 反向測試 |
 | **回歸測試** | `regression-phase0-3.ps1` | `pnpm regress:phase0-3` | Phase 0-3 全面回歸 |
-| **E2E** | Playwright | `pnpm -C apps/web e2e` | 所有 Dashboard routes (Chromium/Firefox/WebKit + Mobile) |
+| **E2E** | Playwright | `pnpm -C apps/web e2e` | 所有 Dashboard routes (Chromium/Firefox/WebKit + Mobile)；含 Agent Field smoke test (`e2e/agent-field.spec.ts`) |
 | **效能** | Lighthouse + autocannon | `perf:lighthouse:prod` / `perf:load:dashboard` | FCP < 1.5s, TTI < 3s, 100 並發 |
 | **安全** | OWASP ZAP + pnpm audit | `scripts/security-scan.ps1` | 依賴漏洞 + Web 基線掃描 |
 
@@ -488,6 +497,7 @@ Middleware 在每個 HTTP request 自動 `SET app.current_tenant_id`（從 JWT �
 | 文件 | 路徑 | 說明 |
 |---|---|---|
 | **使用者手冊 (New)** | `docs/user-guide.md` | **功能操作、管理員指南、FAQ** |
+| **Agent Field UI 計畫** | `docs/agent-field-ui-plan.md` | Agent Field 場景設計、元件規格、動畫與 WebSocket 整合 |
 | 主計畫 | `plan-c-enterprise-seo-platform.md` | 完整架構設計、API 規格、Schema、風險矩陣 |
 | 任務計畫 | `plan-c-task-plan.md` | Phase 0-4 任務追蹤 (138 項，96% 完成) |
 | 優化任務 | `docs/optimization-task-plan.md` | 25 項優化任務 (全部完成，2026-02-18) |
@@ -504,7 +514,45 @@ Middleware 在每個 HTTP request 自動 `SET app.current_tenant_id`（從 JWT �
 
 ---
 
-## 🎯 優化 v2 — 2026-02-18 交付摘要
+## � Agent Field UI — 2026-02-19 交付摘要
+
+新增 `/dashboard/agents/field` 視覺化代理指揮場景，完整交付包含 Code Review 全修正、無障礙設計與 E2E 煙霧測試。
+
+### 主要新增元件
+
+| 元件 | 路徑 | 說明 |
+|---|---|---|
+| `AgentFieldScene` | `components/agent-field/` | SVG 場景根元件；整合 WebSocket、useSchedules、useTenantUsage |
+| `AgentBot` | `components/agent-field/` | SVG inline 代理角色；支援 idle/running/waiting/failed 四態動畫 |
+| `AgentBotAnimated` | `components/agent-field/` | Framer Motion 逐影格動畫版本 |
+| `AgentBotRive` | `components/agent-field/` | Rive `.riv` 動畫版本（含 hooks-safe `AgentBotRiveInner` 拆分） |
+| `AgentCounterHUD` | `components/agent-field/` | 即時計數器 HUD + 配額壓力環形儀表 |
+| `BaseHQ` | `components/agent-field/` | 指揮總部 SVG 圖形 |
+| `FailedZone` | `components/agent-field/` | 失敗代理展示區 |
+| `TaskBox` | `components/agent-field/` | 可點擊任務框，選中後高亮可派遣的代理 |
+| `ThrowAnimation` | `components/agent-field/` | 拋物線投擲動畫（CSS cubic-bezier + Framer Motion） |
+| `agent-field-utils.ts` | `lib/` | 純工具：配額壓力計算、代理設定常數 |
+
+### Code Review 修正
+
+| 嚴重度 | 問題 | 修正 |
+|---|---|---|
+| 🔴 | Agent 派遣使用 `agentIds[0]` 而非被點擊的代理 | 改為 `runSchedule.mutate(agentId)` + `agentIds.includes()` 守衛 |
+| 🟠 | 配額壓力計算前後陣列索引脫鉤 | 使用 `[usage, limit]` tuple 配對再過濾 |
+| 🟠 | `AgentBotRive` 條件式 hook 違反 Rules of Hooks | 提取 `AgentBotRiveInner` 子元件 |
+| 🟡 | 側欄 Agents active 狀態與 Agent Field 重疊 | 增加 `!pathname.startsWith('.../agents/field')` 排除 |
+| 🟢 | `.env.example` 預填 Rive 路徑洩漏潛在商業資產路徑 | 清空為空值並附加商業授權說明 |
+
+### Accessibility & E2E
+
+- **aria-label / aria-pressed**：`AgentBot`、`AgentBotRive` 所有代理按鈕均加入語意屬性
+- **focus-visible ring**：鍵盤使用者可見焦點環 (`focus-visible:ring-2 focus-visible:ring-blue-500`)
+- **E2E 煙霧測試** (`e2e/agent-field.spec.ts`)：選擇任務 → 派遣代理 → 確認 UI 狀態，✅ 1 passed (1.6s)
+- **`allowedDevOrigins`** 加入 `next.config.js`，消除 Playwright 跨域開發警告
+
+---
+
+## �🎯 優化 v2 — 2026-02-18 交付摘要
 
 本次優化涵蓋 25 項計畫任務與 11 項 code review 修復，所有變更均已通過 `pnpm -r build` 全端編譯驗證。
 
@@ -544,4 +592,4 @@ Middleware 在每個 HTTP request 自動 `SET app.current_tenant_id`（從 JWT �
 
 ---
 
-*最後更新：2026-02-19*
+*最後更新：2026-02-19 — Agent Field UI 交付。*

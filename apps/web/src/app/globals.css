@@ -57,3 +57,51 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  @keyframes agent-walk {
+    0%, 100% {
+      transform: translateY(0) translateX(0);
+    }
+    50% {
+      transform: translateY(-2px) translateX(1px);
+    }
+  }
+
+  @keyframes agent-celebrate {
+    0%, 100% {
+      transform: scale(1);
+      filter: saturate(1);
+    }
+    50% {
+      transform: scale(1.08);
+      filter: saturate(1.2);
+    }
+  }
+
+  .agent-status-idle {
+    animation: agent-walk 1.4s ease-in-out infinite;
+  }
+
+  .agent-status-running {
+    animation: agent-walk 0.7s ease-in-out infinite;
+  }
+
+  .agent-status-completed {
+    animation: agent-celebrate 0.8s ease-in-out infinite;
+  }
+
+  .agent-status-failed {
+    filter: grayscale(100%);
+    opacity: 0.75;
+    transform: rotate(90deg);
+  }
+
+  .agent-status-paused {
+    opacity: 0.6;
+  }
+
+  .agent-status-waiting {
+    opacity: 0.85;
+  }
+}

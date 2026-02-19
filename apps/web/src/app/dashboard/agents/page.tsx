@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { Download, Filter, PauseCircle, Play, PlayCircle } from 'lucide-react';
 
@@ -42,6 +44,7 @@ const AGENTS: Array<{ id: AgentId; label: string }> = [
 ];
 
 export default function AgentsPage() {
+  const pathname = usePathname();
   const { data: schedules, isLoading: schedulesLoading, isError: schedulesError } = useSchedules();
   const { data: activities, isLoading: activitiesLoading } = useAgentActivities();
   const pauseSchedule = usePauseSchedule();
@@ -97,12 +100,21 @@ export default function AgentsPage() {
   };
 
   const busy = pauseSchedule.isPending || resumeSchedule.isPending || runSchedule.isPending;
+  const fieldHref = pathname.endsWith('/agents') ? `${pathname}/field` : '/dashboard/agents/field';
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="flex items-start justify-between gap-4">
+        <div>
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Agent Status Panel</h1>
         <p className="mt-2 text-gray-600 dark:text-gray-400">Phase 3 (4.3): status cards + manual trigger + pause/resume</p>
+        </div>
+        <Link
+          href={fieldHref}
+          className="inline-flex items-center gap-2 rounded-lg border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 px-3 py-2 text-sm font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/35"
+        >
+          Agent Field
+        </Link>
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

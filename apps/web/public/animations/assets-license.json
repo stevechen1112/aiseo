@@ -1,0 +1,14 @@
+{
+  "assets": [
+    {
+      "name": "agent-bot.riv",
+      "status": "temporary-sample",
+      "sourceUrl": "https://cdn.rive.app/animations/vehicles.riv",
+      "author": "Rive sample",
+      "license": "Unknown for redistribution - integration testing only",
+      "attributionRequired": true,
+      "downloadedAt": "2026-02-19",
+      "notes": "Replace before production with explicitly commercial-use licensed robot animation."
+    }
+  ]
+}
